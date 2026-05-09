@@ -19,7 +19,7 @@ Common scripts:
 | `npm run dev` | Turbopack dev server |
 | `npm run lint` | ESLint (Next preset) |
 | `npm run build` | Production build + type-check |
-| `npm run verify:supabase` | HTTPS handshake against your hosted project |
+| `npm run verify:supabase` | Spins `@supabase/supabase-js`, calls Auth `getSession()` |
 
 ## Supabase bootstrap
 
@@ -53,7 +53,7 @@ src/lib/supabase/
 ├── server.ts     # Async server helper (cookies from next/headers)
 ├── env.ts        # Shared env accessors with friendly throws
 ├── types.ts      # Database generics (stub until codegen)
-└── verifyConnection.ts → tiny handshake helper reused by tooling
+└── verifyConnection.ts → disposable `@supabase/supabase-js` client + harmless `auth.getSession()` probe
 ```
 
 > **Auth note:** Middleware and Supabase cookie refresh helpers are deliberately **not** part of Trav yet — add them when `/login` swaps from mock rehearsal to OAuth/email flows.
@@ -80,7 +80,7 @@ Re-run generators whenever schemas change — the stub file is intentionally emp
 | Symptom | Fix |
 | --- | --- |
 | `Missing NEXT_PUBLIC_*` thrown in UI | Populate `.env.local`, restart dev server |
-| `verify:supabase` exits with HTTP 502/522 | Project paused or network firewall — revive in dashboard |
+| `verify:supabase` times out / fetch errors | Project paused, flaky VPN/antivirus proxies, or bad URL — revive in dashboard or relax interceptors |
 | `setAll` errors in console only | Expected during Server Components; fix with middleware when auth launches |
 
 ---

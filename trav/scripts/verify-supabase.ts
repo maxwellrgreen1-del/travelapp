@@ -1,6 +1,6 @@
 /**
- * Sanity check that HTTPS + anon key can handshake with PostgREST.
- * Loads `.env.local` keys when npm runs outside Next runtime.
+ * Loads `.env.local`, builds a disposable Supabase client, and pings Auth via `getSession()`
+ * — friendlier than raw PostgREST when tables/RLS are not seeded yet.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -9,26 +9,32 @@ import { resolve } from "node:path";
 import { verifySupabaseConnection } from "../src/lib/supabase/verifyConnection";
 
 function loadEnvLocal() {
-  const path = resolve(process.cwd(), ".env.local");
-  if (!existsSync(path)) {
+  const envPath = resolve(process.cwd(), ".env.local");
+
+  if (!existsSync(envPath)) {
+    console.warn(
+      "[Trav × Supabase] No `.env.local` found beside package.json — create it from `.env.local.example`, or inject env vars through your shell/CI harness.",
+    );
     return;
   }
 
-  const text = readFileSync(path, "utf8");
+  const text = readFileSync(envPath, "utf8");
 
-  for (let line of text.split(/\r?\n/)) {
-    line = line.trim();
-    if (!line || line.startsWith("#")) {
+  for (const rawLine of text.split(/\r?\n/)) {
+    const lineWithoutBom = rawLine.replace(/^\uFEFF/, "");
+    const trimmed = lineWithoutBom.trim();
+
+    if (!trimmed || trimmed.startsWith("#")) {
       continue;
     }
 
-    const eq = line.indexOf("=");
+    const eq = trimmed.indexOf("=");
     if (eq === -1) {
       continue;
     }
 
-    const key = line.slice(0, eq).trim();
-    let value = line.slice(eq + 1).trim();
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
 
     if (
       (value.startsWith('"') && value.endsWith('"')) ||
@@ -36,6 +42,8 @@ function loadEnvLocal() {
     ) {
       value = value.slice(1, -1);
     }
+
+    /** Never override values already pinned by CI or forwarded shells — `.env.local` is the default only. */
 
     if (process.env[key] === undefined) {
       process.env[key] = value;
@@ -45,18 +53,34 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-async function main() {
+function printFailure(message: string) {
+  console.error(`[Trav × Supabase] Connection check failed — ${message}`);
+}
+
+async function verifyAndReport() {
   const result = await verifySupabaseConnection();
 
   if (!result.ok) {
-    console.error(`[Trav × Supabase] Connection check failed: ${result.reason}`);
-    process.exit(1);
+    printFailure(result.reason);
+    process.exitCode = 1;
     return;
   }
 
-  console.log(
-    `[Trav × Supabase] OK ✓ handshake HTTP ${result.status} in ${result.latencyMs}ms (never printed secrets!)`,
-  );
+  const hint = result.hasSession
+    ? "Supabase surfaced a hydrated session artifact (likely harmless for anonymous checks)."
+    : "Anonymous reachability succeeded (no traveller session persisted).";
+
+  console.log(`[Trav × Supabase] OK ✓ client booted · auth#getSession completed in ${result.latencyMs}ms — ${hint}`);
 }
 
-void main();
+verifyAndReport().catch((error: unknown) => {
+  if (error instanceof Error && error.message) {
+    printFailure(error.message);
+  } else if (typeof error === "string") {
+    printFailure(error);
+  } else {
+    printFailure("Unhandled verifier exception — rerun with NODE_OPTIONS=--trace-uncaught for depth (never prints secrets).");
+  }
+
+  process.exitCode = 1;
+});

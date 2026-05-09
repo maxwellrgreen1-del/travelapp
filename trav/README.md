@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trav
 
-## Getting Started
+Travel-first itineraries, saved pins, and community recaps rendered with the Next.js App Router (mock-heavy today, Supabase-ready).
 
-First, run the development server:
+## Local development
 
 ```bash
+cd trav
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Browse [http://localhost:3000](http://localhost:3000). Hot reload behaves like any Next.js 16 workspace.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Common scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Meaning |
+| --- | --- |
+| `npm run dev` | Turbopack dev server |
+| `npm run lint` | ESLint (Next preset) |
+| `npm run build` | Production build + type-check |
+| `npm run verify:supabase` | HTTPS handshake against your hosted project |
 
-## Learn More
+## Supabase bootstrap
 
-To learn more about Next.js, take a look at the following resources:
+Supabase splits concerns across **clients** shipped in-app (anon/public key only) versus **privileged service keys** that must stay on the server. Trav currently wires **only public env vars**:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Env var | Where to find it |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Dashboard → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Dashboard → Settings → API → anon / public |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Wire env files without leaking secrets
 
-## Deploy on Vercel
+1. Duplicate `.env.local.example` into `.env.local` (already git-ignored).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```bash
+   cp .env.local.example .env.local   # Unix shells
+   copy .env.local.example .env.local # Windows shells
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Paste the two values exactly as Supabase prints them (`https://` project URL plus the long JWT-style anon token).
+
+3. Restart `npm run dev` whenever `.env.local` changes — Next reads env vars on boot.
+
+4. Run `npm run verify:supabase` once keys are filled. Successful output resembles `HTTP 200 … latency …` **without exposing keys**.
+
+Implementation map for beginners:
+
+```
+src/lib/supabase/
+├── client.ts     # Browser / Client Components (createBrowserClient)
+├── server.ts     # Async server helper (cookies from next/headers)
+├── env.ts        # Shared env accessors with friendly throws
+├── types.ts      # Database generics (stub until codegen)
+└── verifyConnection.ts → tiny handshake helper reused by tooling
+```
+
+> **Auth note:** Middleware and Supabase cookie refresh helpers are deliberately **not** part of Trav yet — add them when `/login` swaps from mock rehearsal to OAuth/email flows.
+
+### Generate real `Database` types
+
+After designing tables inside Supabase:
+
+```bash
+npx supabase gen types typescript \
+  --project-id <YOUR_PROJECT_REF> \
+  --schema public \
+  > src/lib/supabase/types.ts
+```
+
+Re-run generators whenever schemas change — the stub file is intentionally empty so TypeScript stays honest until codegen exists.
+
+### Useful documentation
+
+- [Supabase + Next.js App Router SSR guide](https://supabase.com/docs/guides/auth/server-side/nextjs)
+
+## Troubleshooting checklist
+
+| Symptom | Fix |
+| --- | --- |
+| `Missing NEXT_PUBLIC_*` thrown in UI | Populate `.env.local`, restart dev server |
+| `verify:supabase` exits with HTTP 502/522 | Project paused or network firewall — revive in dashboard |
+| `setAll` errors in console only | Expected during Server Components; fix with middleware when auth launches |
+
+---
+
+This project inherits the stock Next.js ergonomics documented at [nextjs.org/docs](https://nextjs.org/docs). Deploy previews work on Vercel when environment variables mirror `.env.local` in Project Settings → Environment Variables.

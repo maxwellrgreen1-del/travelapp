@@ -25,3 +25,20 @@ export type TravelFeedPost = {
   destinationTags?: string[];
   postedAtISO: string;
 };
+
+export type TravelPostCommentPreview = {
+  id: Id;
+  authorUsername: string;
+  authorInitials: string;
+  excerpt: string;
+  postedAtISO: string;
+};
+
+/** Full traveller log once detail views hydrate richer copy than timeline cards allow. */
+export type TravelPostDetail = TravelFeedPost & {
+  journal: string;
+  placesVisited: string[];
+  restaurants: string[];
+  externalLinks: { label: string; url: string }[];
+  commentPreview: TravelPostCommentPreview[];
+};

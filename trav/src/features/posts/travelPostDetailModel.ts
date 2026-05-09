@@ -5,6 +5,10 @@ import type { TravelFeedPost, TravelPostCommentPreview, TravelPostDetail } from 
 /** Routed IDs that hydrate from an established Trav timeline recap instead. */
 const POST_DETAIL_ROUTE_ALIASES: Partial<Record<string, string>> = {
   "explorer-post-banff": "post-banff-canoe-m",
+  /** Profile grid tiles → canonical feed / explore bodies + layers. */
+  "grid-marrakech-riad": "post-marrakech-riad-r",
+  "grid-bagan-flight": "post-bagan-balloon-d",
+  "grid-svalbard-tones": "explorer-post-svalbard-night",
 };
 
 function seededComments(seed: number): TravelPostCommentPreview[] {
@@ -363,16 +367,110 @@ const EXPLORER_DETAIL_LAYERS: Record<string, DetailLayer> = {
 };
 
 /**
- * Hydrate a richly mocked travel detail card by merging feed explorers + masonry tiles.
+ * Profile-only grid IDs from `mockProfileTrailPosts` that do not duplicate a feed/masonry row verbatim.
+ */
+const profileGridBridgeBodies: TravelFeedPost[] = [
+  {
+    id: "grid-lagos-sunrise",
+    username: "maya.outbound",
+    userInitials: "MO",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&w=560&q=80&fit=crop",
+    locationDisplay: "Lekki · Lagos",
+    imageUrl:
+      "https://images.unsplash.com/photo-1613395877344-bc4cbf7e6f73?auto=format&w=920&q=80&fit=crop",
+    imageAlt:
+      "Sunrise glow on Atlantic swell at Lagos shoreline, warm light on surf and silhouetted palms.",
+    title: "Lagos tide shift",
+    description:
+      "Harmattan-soft light braided smoke from coal grills into cobalt surf—we stayed till the muezzins thinned.",
+    likesCount: 892,
+    commentsCount: 34,
+    destinationTags: ["Atlantic fringe", "Lagos cobalt", "Smoke + surf"],
+    postedAtISO: "2026-05-07T08:22:11.000Z",
+  },
+  {
+    id: "grid-lima-ceviche",
+    username: "maya.outbound",
+    userInitials: "MO",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&w=560&q=80&fit=crop",
+    locationDisplay: "Barranco · Lima",
+    imageUrl:
+      "https://images.unsplash.com/photo-1514327605112-b887c0e61c0a?auto=format&w=920&q=80&fit=crop",
+    imageAlt:
+      "Ceviche dish with rocoto garnish, citrus, and translucent fish on a ceramic plate at a Lima counter.",
+    title: "Lima ceviche halo",
+    description:
+      "Ocean mist beaded the glass-front counter while lime steam lifted off leche de tigre and rocoto confetti.",
+    likesCount: 1104,
+    commentsCount: 47,
+    destinationTags: ["Pacific mist", "Cevichería halo", "Rocoto braid"],
+    postedAtISO: "2026-05-06T05:41:02.000Z",
+  },
+];
+
+const PROFILE_GRID_DETAIL_LAYERS: Record<string, DetailLayer> = {
+  "grid-lagos-sunrise": {
+    journal: `Dawn smelled like ozone and spiced oil before the hawkers unfolded plastic stools. Waves threw graphite ribbons against timber breakwaters while surfers counted sets in pidgin shorthand.
+
+We followed a coal-roast smoke plume inland, traded naira coins for brittle baguette halves, then doubled back barefoot where Atlantic cobalt glassed mirror-still beside wading fishermen.`,
+    placesVisited: [
+      "Lekki breakwater sunrise pull — cobalt glass hour",
+      "Freedom Park dusk brass braid + Afrobeat fringe",
+      "Nike Arts Gallery courtyard ironwork braid",
+      "Eko Atlantic sandbar braid before ferry horn",
+    ],
+    restaurants: [
+      "Ikoyi suya bunker with Scotch bonnet honey glaze",
+      "Yaba jollof basmati bunker + plantain crumble",
+      "Victoria Island fish pepper soup bunker with ginger foam",
+      "Champagne brunch deck with moi-moi custard flight",
+    ],
+    externalLinks: [
+      { label: "Safe Lagos lagoon swim brief", url: "https://example.org/lagos-swim-etiquette" },
+      { label: "Harmattan commuter wind rose", url: "https://example.org/harmattan-wind-map" },
+    ],
+    commentPreview: seededComments(5101),
+  },
+  "grid-lima-ceviche": {
+    journal: `Counter tiles still held yesterday's seawater halo when the cook shaved rocoto curls like ribbon candy. Citrus steam fogged bifocals; every clam shell clacked applause.
+
+We chased pisco-less micro flights through Barranco murals, slipped into Surquillo for lúcuma custard, then returned for a second tiradito while dusk turned the Pacific pewter.`,
+    placesVisited: [
+      "Barranco murals spine before Puente de los Suspiros dusk",
+      "Surquillo market lúcuma + chirimoya bunker",
+      "Miraflores malecón paraglider braid",
+      "Huaca Pucllana clay spine night tour",
+    ],
+    restaurants: [
+      "Barranco cebaría with leche de tigre syllabus flight",
+      "Chorrillos anticucho bunker with rocoto mascara",
+      "Chifa hallway with Chaufa prism + Inca Kola bunker",
+      "Pisco-less tasting deck with causa potato prism",
+    ],
+    externalLinks: [
+      { label: "Responsible anchovy season calendar", url: "https://example.org/peru-anchovy-season" },
+      { label: "Lima BRT + coastal walkway map stub", url: "https://example.org/lima-metropolitano" },
+    ],
+    commentPreview: seededComments(5102),
+  },
+};
+
+/**
+ * Hydrate a richly mocked travel detail card by merging feed explorers + masonry tiles + profile grid tiles.
  */
 export function resolveTravelPostDetail(requestedId: string): TravelPostDetail | null {
   const routedId = POST_DETAIL_ROUTE_ALIASES[requestedId] ?? requestedId;
 
   const feedCore = mockTravelPosts.find((post) => post.id === routedId);
-  const bridgeCore = explorerBridgeFeedBodies.find(
+  const explorerBridgeCore = explorerBridgeFeedBodies.find(
     (post) => post.id === requestedId || post.id === routedId,
   );
-  const core = feedCore ?? bridgeCore ?? null;
+  const profileGridCore = profileGridBridgeBodies.find(
+    (post) => post.id === requestedId || post.id === routedId,
+  );
+  const core = feedCore ?? explorerBridgeCore ?? profileGridCore ?? null;
 
   if (!core) {
     return null;
@@ -382,6 +480,7 @@ export function resolveTravelPostDetail(requestedId: string): TravelPostDetail |
     FEED_DETAIL_LAYERS[routedId] ??
     FEED_DETAIL_LAYERS[core.id] ??
     EXPLORER_DETAIL_LAYERS[core.id] ??
+    PROFILE_GRID_DETAIL_LAYERS[core.id] ??
     DEFAULT_DETAIL_LAYER;
 
   return {

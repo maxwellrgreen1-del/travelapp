@@ -17,7 +17,7 @@ export function AuthOAuthRow({ contextLabel }: AuthOAuthRowProps) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const showSoon = useCallback(() => {
-    setNotice("Passport sign-in launches with Trav’s SSO drop — maps & mail still mocking for now.");
+    setNotice("Passport sign-in docks with tript’s SSO lane soon — maps + mail mocked for rehearsals.");
   }, []);
 
   return (

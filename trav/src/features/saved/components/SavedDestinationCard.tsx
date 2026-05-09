@@ -25,7 +25,7 @@ function formatSavedBookmarkDate(iso: string): string {
 }
 
 /**
- * Editorial wishlist strip: hero imagery, remembrance copy, tactile CTAs into Trav’s graph.
+ * Editorial wishlist strip: hero imagery, remembrance copy, tactile CTAs into tript’s graph.
  */
 export function SavedDestinationCard({ destination, className }: SavedDestinationCardProps) {
   const vibeLabel =
@@ -105,7 +105,7 @@ export function SavedDestinationCard({ destination, className }: SavedDestinatio
               </Link>
             ) : (
               <p className="self-center px-2 text-[13px] font-medium italic text-neutral-500 sm:self-auto">
-                No Trav recap pinned yet · explore picks up the slack below.
+                No tript recap pinned yet · explore picks up the slack below.
               </p>
             )}
 

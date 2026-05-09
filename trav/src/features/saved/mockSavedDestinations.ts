@@ -33,7 +33,7 @@ export const savedDestinationCategoryOptions: ReadonlyArray<{
 ];
 
 /**
- * Maya’s wish compass — seeded list (8+) until Supabase sync ships.
+ * tript wish compass — seeded list (8+) until Supabase sync ships.
  */
 export const mockSavedDestinationPins: SavedDestinationPin[] = [
   {

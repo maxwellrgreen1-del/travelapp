@@ -17,7 +17,7 @@ export function HomeFeed() {
               <span className="text-3xl font-semibold tracking-tight text-neutral-950">For You</span>
             </span>
           }
-          subtitle="Curated itineraries from explorers you follow—or will follow once profiles sync."
+          subtitle="Curated itineraries on tript from explorers you follow — or will follow once profiles sync."
           trailing={<NotificationsBellLink />}
           showBackNavigation={false}
         />

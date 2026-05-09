@@ -24,7 +24,7 @@ export function TagInputPlaceholder({
   tags,
   onTagsChange,
   label = "Destination tags",
-  hint = 'Tap Enter after each hashtag. Leading # is optional — Trav adds them for you.',
+  hint = 'Tap Enter after each hashtag. Leading # is optional — tript adds them for you.',
   placeholder = "Add hashtag…",
   disabled = false,
 }: TagInputPlaceholderProps) {

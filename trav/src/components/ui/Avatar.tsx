@@ -40,7 +40,7 @@ export function Avatar({ src, alt = "", initials, size = "md", className, ...pro
   }
 
   return (
-    // Trav allows remote Supabase uploads later — swap to `next/image` once URLs are gated in `remotePatterns`.
+    // tript allows remote Supabase uploads later — swap to `next/image` once URLs are gated in `remotePatterns`.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}

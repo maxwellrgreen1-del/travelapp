@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonClassName } from "@/components/ui/Button";
 
 /**
- * Loud-but-friendly prompt that mirrors Instagram’s reels composer affordance without leaving Trav’s palette.
+ * Loud-but-friendly prompt that mirrors Instagram’s reels composer affordance without leaving tript’s palette.
  */
 export function FeedComposerCTA() {
   return (

@@ -1,6 +1,6 @@
-# Trav
+# tript
 
-Travel-first itineraries, saved pins, and community recaps rendered with the Next.js App Router (mock-heavy today, Supabase-ready).
+Trip-first itineraries, saved pins, and crew recaps rendered with the Next.js App Router (mock-heavy today, Supabase-ready).
 
 ## Local development
 
@@ -23,7 +23,7 @@ Common scripts:
 
 ## Supabase bootstrap
 
-Supabase splits concerns across **clients** shipped in-app (anon/public key only) versus **privileged service keys** that must stay on the server. Trav currently wires **only public env vars**:
+Supabase splits concerns across **clients** shipped in-app (anon/public key only) versus **privileged service keys** that must stay on the server. tript currently wires **only public env vars**:
 
 | Env var | Where to find it |
 | --- | --- |
@@ -43,7 +43,7 @@ Supabase splits concerns across **clients** shipped in-app (anon/public key only
 
 3. Restart `npm run dev` whenever `.env.local` changes — Next reads env vars on boot.
 
-4. Run `npm run verify:supabase` once keys are filled. Successful output resembles `HTTP 200 … latency …` **without exposing keys**.
+4. Run `npm run verify:supabase` once keys are filled. Successful output reports `auth#getSession … latency …` — **secrets never echo to the terminal**.
 
 Implementation map for beginners:
 
@@ -56,7 +56,7 @@ src/lib/supabase/
 └── verifyConnection.ts → disposable `@supabase/supabase-js` client + harmless `auth.getSession()` probe
 ```
 
-> **Auth note:** Middleware and Supabase cookie refresh helpers are deliberately **not** part of Trav yet — add them when `/login` swaps from mock rehearsal to OAuth/email flows.
+> **Auth note:** Middleware and Supabase cookie refresh helpers are deliberately **not** part of tript yet — add them when `/login` swaps from mock rehearsal to OAuth/email flows.
 
 ### Generate real `Database` types
 

@@ -96,9 +96,9 @@ export function LoginExperience() {
   return (
     <div className="flex min-h-[100svh] w-full flex-col bg-gradient-to-b from-[#e8f4e8] via-white to-[#f4fcf1] pb-[max(32px,calc(env(safe-area-inset-bottom)+24px))] pt-6">
       <AuthBrandHeader
-        eyebrow="Trav access"
+        eyebrow="tript access"
         title="Welcome back, wanderer"
-        subtitle="Passport desk is mocking travel lanes for now — no Supabase voyages fired, just polished rails to rehearse rituals."
+        subtitle="Passport rehearsal for tript — no Supabase voyages wired yet, just polished rails to rehearse rituals."
         className="pb-10"
       />
 
@@ -140,7 +140,7 @@ export function LoginExperience() {
                   className="text-[13px] font-semibold text-primary underline-offset-4 outline-none ring-primary/30 hover:underline focus-visible:rounded-md focus-visible:ring-4"
                   onClick={() =>
                     setForgotCue(
-                      "Password sails home once Trav spins secure mail rails — tuck this wishlist cue for launch week.",
+                      "Password resets sail once tript spins secure mail — tuck this cue for launch week.",
                     )
                   }
                 >
@@ -157,7 +157,7 @@ export function LoginExperience() {
 
           <div className="space-y-[18px]">
             <Button type="submit" variant="primary" size="lg" fullWidth disabled={busy}>
-              {busy ? "Plotting your coordinates…" : "Log into Trav"}
+              {busy ? "Plotting your coordinates…" : "Log into tript"}
             </Button>
           </div>
         </form>

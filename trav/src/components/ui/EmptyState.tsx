@@ -7,7 +7,7 @@ export type EmptyStateProps = {
   title: string;
   description?: ReactNode;
   icon?: ReactNode;
-  /** Primary call-to-action (usually a Trav `Button` or `next/link`). */
+  /** Primary call-to-action (usually a tript `Button` or `next/link`). */
   action?: ReactNode;
   className?: string;
 };

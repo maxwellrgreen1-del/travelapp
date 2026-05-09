@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: APP_NAME,
     template: `%s · ${APP_NAME}`,
   },
-  description: "Mobile-first travel logging and social discovery.",
+  description: "Mobile-first trip logging with tript — social discovery built for explorers.",
   applicationName: APP_NAME,
   appleWebApp: {
     capable: true,

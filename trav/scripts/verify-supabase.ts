@@ -13,7 +13,7 @@ function loadEnvLocal() {
 
   if (!existsSync(envPath)) {
     console.warn(
-      "[Trav × Supabase] No `.env.local` found beside package.json — create it from `.env.local.example`, or inject env vars through your shell/CI harness.",
+      "[tript × Supabase] No `.env.local` found beside package.json — create it from `.env.local.example`, or inject env vars through your shell/CI harness.",
     );
     return;
   }
@@ -54,7 +54,7 @@ function loadEnvLocal() {
 loadEnvLocal();
 
 function printFailure(message: string) {
-  console.error(`[Trav × Supabase] Connection check failed — ${message}`);
+  console.error(`[tript × Supabase] Connection check failed — ${message}`);
 }
 
 async function verifyAndReport() {
@@ -70,7 +70,7 @@ async function verifyAndReport() {
     ? "Supabase surfaced a hydrated session artifact (likely harmless for anonymous checks)."
     : "Anonymous reachability succeeded (no traveller session persisted).";
 
-  console.log(`[Trav × Supabase] OK ✓ client booted · auth#getSession completed in ${result.latencyMs}ms — ${hint}`);
+  console.log(`[tript × Supabase] OK ✓ client booted · auth#getSession completed in ${result.latencyMs}ms — ${hint}`);
 }
 
 verifyAndReport().catch((error: unknown) => {

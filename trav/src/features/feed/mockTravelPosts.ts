@@ -2,7 +2,7 @@ import type { TravelFeedPost } from "@/types";
 
 /**
  * Imaginary travelers + real-world inspired stops.
- * Uses Unsplash JPGs purely as remote placeholders until Trav uploads arrive.
+ * Uses Unsplash JPGs purely as remote placeholders until tript uploads arrive.
  */
 export const mockTravelPosts: TravelFeedPost[] = [
   {

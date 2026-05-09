@@ -34,7 +34,7 @@ export function DestinationPreviewCard({ destination, className }: DestinationPr
           </div>
         </div>
         <footer className="rounded-b-[inherit] bg-white px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-neutral-950">
-          Pin to routed trip · soon
+          Open inside tript · soon
         </footer>
       </article>
     </Card>

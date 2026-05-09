@@ -16,7 +16,7 @@ export type PageHeaderProps = {
 };
 
 /**
- * Opinionated top-of-screen header for Trav — title column + optional trailing region.
+ * Opinionated top-of-screen header for tript — title column + optional trailing region.
  */
 export function PageHeader({
   title,

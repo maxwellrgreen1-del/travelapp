@@ -2,7 +2,7 @@ import { mockTravelPosts } from "@/features/feed/mockTravelPosts";
 
 import type { TravelFeedPost, TravelPostCommentPreview, TravelPostDetail } from "@/types";
 
-/** Routed IDs that hydrate from an established Trav timeline recap instead. */
+/** Routed IDs that hydrate from an established tript timeline recap instead. */
 const POST_DETAIL_ROUTE_ALIASES: Partial<Record<string, string>> = {
   "explorer-post-banff": "post-banff-canoe-m",
   /** Profile grid tiles → canonical feed / explore bodies + layers. */
@@ -40,7 +40,7 @@ function seededComments(seed: number): TravelPostCommentPreview[] {
 
 const DEFAULT_DETAIL_LAYER = {
   journal:
-    "Trav stubs long-form journeys here until nightly Supabase sync stitch together voice memo timestamps, topo PDFs, and ferry scans.",
+    "tript stubs long-form journeys here until nightly Supabase sync stitches together voice memos, topo PDFs, and ferry scans.",
   placesVisited: ["Transit hub plaza", "Rooftop mirador", "Local market alley"],
   restaurants: ["Bakery with honey butter + loose leaf iced teas", "Communal diner with chalkboard specials nightly"],
   externalLinks: [

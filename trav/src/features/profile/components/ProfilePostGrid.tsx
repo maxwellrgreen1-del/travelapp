@@ -15,7 +15,7 @@ type ProfilePostGridProps = {
 export function ProfilePostGrid({
   posts,
   title = "Field notes on the mantle",
-  subtitle = "Tap any tile for the long-form riff — seeded from mock itineraries for now.",
+  subtitle = "Tap any tile for the long-form riff — mock itineraries seeded on tript for now.",
 }: ProfilePostGridProps) {
   return (
     <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
@@ -48,7 +48,7 @@ export function ProfilePostGrid({
 
               <div className="absolute inset-x-0 bottom-0 space-y-[7px] bg-gradient-to-t from-black via-black/45 to-transparent p-4 text-white opacity-[0.93] motion-safe:transition-opacity group-hover:opacity-100">
                 <span className="inline-flex items-center rounded-full border border-white/45 bg-black/55 px-[10px] py-[3px] text-[10px] font-semibold uppercase tracking-[0.32em] text-white backdrop-blur">
-                  Trav log
+                  tript log
                 </span>
                 <p id={`trail-${post.id}`} className="text-[14px] font-semibold leading-snug">{post.title}</p>
                 <p className="text-[12px] text-white/82">{post.subtitle}</p>

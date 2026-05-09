@@ -94,7 +94,7 @@ export function SignupExperience() {
     }
 
     if (trimmedLength(email) === 0) {
-      nextErrors.email = "Anchors aweigh — Trav needs mail to berth your dossier.";
+      nextErrors.email = "Anchors aweigh — tript needs mail to berth your dossier.";
     }
     const emailCue = validateEmailFormat(email);
     if (emailCue && !nextErrors.email) {
@@ -136,8 +136,8 @@ export function SignupExperience() {
     <div className="flex min-h-[100svh] w-full flex-col bg-gradient-to-b from-[#e6f6ff] via-white to-[#f2fbed] pb-[max(32px,calc(env(safe-area-inset-bottom)+24px))] pt-6">
       <AuthBrandHeader
         eyebrow="Join the scouts"
-        title="Raise a Trav flag"
-        subtitle="Mock rails only — your itinerary vault materialises once Supabase ferries payloads. Till then rehearsal fields stay gorgeous."
+        title="Raise your tript sails"
+        subtitle="Mock rails only for tript — your itinerary vault materialises once Supabase ferries payloads. Rehearsal fields stay gorgeous till then."
         className="pb-10"
       />
 
@@ -210,11 +210,11 @@ export function SignupExperience() {
 
           <div className="space-y-[18px] pt-1">
             <Button type="submit" variant="primary" size="lg" fullWidth disabled={busy}>
-              {busy ? "Carving stamps…" : "Create Trav account"}
+              {busy ? "Carving stamps…" : "Create tript account"}
             </Button>
 
             <p className="px-px text-[12px] leading-relaxed text-neutral-600">
-              By continuing you agree Trav’s etiquette — stay kind to hosts, tides, gate agents, wild critters… even in mock rehearsals.
+              By continuing you agree tript’s etiquette — stay kind to hosts, tides, gate agents, wild critters… even during mock rehearsals.
             </p>
           </div>
         </form>
@@ -228,7 +228,7 @@ export function SignupExperience() {
             prefetch={false}
             className="font-semibold text-primary underline-offset-[5px] outline-none hover:underline focus-visible:rounded-lg focus-visible:ring-4 focus-visible:ring-primary/35"
           >
-            Log into Trav
+            Log into tript
           </Link>
         </p>
       </Card>

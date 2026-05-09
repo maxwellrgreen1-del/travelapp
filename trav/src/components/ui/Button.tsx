@@ -34,7 +34,7 @@ const baseClasses =
 
 type ButtonClassComposer = Pick<ButtonProps, "variant" | "size" | "fullWidth" | "className">;
 
-/** Share Trav button sizing with `<Link>` or custom elements when you can't use `<Button>`. */
+/** Share tript button sizing with `<Link>` or custom elements when you can't use `<Button>`. */
 export function buttonClassName({
   variant = "primary",
   size = "md",
@@ -45,7 +45,7 @@ export function buttonClassName({
 }
 
 /**
- * Buttons use Trav's primary `#85BB65` by default (`variant="primary"`).
+ * Buttons use tript's primary `#85BB65` by default (`variant="primary"`).
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = "primary", size = "md", fullWidth = false, className, disabled, type, ...props },

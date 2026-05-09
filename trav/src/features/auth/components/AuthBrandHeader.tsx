@@ -29,7 +29,7 @@ export function AuthBrandHeader({ eyebrow, title, subtitle, className }: AuthBra
 
       <div className="space-y-5">
         <div className="mx-auto inline-flex rounded-[34px] border border-primary/30 bg-white/93 p-[26px] shadow-[0_18px_54px_-32px_rgba(34,71,52,0.55)] backdrop-blur">
-          <span className="sr-only">Trav brand compass emblem</span>
+          <span className="sr-only">tript brand compass emblem</span>
           <DecorCompassBadge aria-hidden className="text-primary drop-shadow-[0_8px_20px_rgba(133,187,101,0.35)]" />
         </div>
         <p className="text-[11px] font-bold uppercase tracking-[0.45em] text-primary">{eyebrow}</p>

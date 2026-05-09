@@ -18,13 +18,13 @@ export function SearchBar({ value, onChange, hint, placeholder, onClear, classNa
     onChange(event.target.value);
   };
 
-  const inputId = idProp ?? "trav-explore-search";
+  const inputId = idProp ?? "tript-explore-search";
   const showClear = Boolean(value) && typeof onClear === "function";
 
   return (
     <div className={cx("w-full space-y-2", className)}>
       <label className="sr-only" htmlFor={inputId}>
-        Explore travellers, itineraries, palettes
+        Explore trippers, itineraries, palettes
       </label>
       <div
         className={cx(

@@ -33,7 +33,7 @@ export function PostDetailScreen({ id }: PostDetailScreenProps) {
           title="This travel tale is still unpacking"
           description={
             <>
-              No mock bundle matches <span className="font-semibold text-neutral-900">{id}</span> yet — try a Trav feed recap
+              No mock bundle matches <span className="font-semibold text-neutral-900">{id}</span> yet — try opening a tript feed recap
               or masonry tile from Explore.
             </>
           }

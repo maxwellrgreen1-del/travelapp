@@ -71,7 +71,7 @@ export function PostActions({
           onClick={toggleSave}
           className="-m-2 rounded-xl p-2 outline-none ring-primary/30 transition hover:bg-primary/10 active:scale-[0.96] focus-visible:ring-4"
           aria-pressed={saved}
-          aria-label={saved ? "Remove from Trav saves" : "Save itinerary"}
+          aria-label={saved ? "Remove from tript saves" : "Save itinerary"}
         >
           <RibbonIcon bookmarked={saved} className={saved ? "text-primary" : "text-neutral-800"} />
         </button>

@@ -1,15 +1,11 @@
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedDestinationsExperience } from "@/features/saved/SavedDestinationsExperience";
 
 export function SavedScreen() {
   return (
-    <div className="space-y-6 px-4 pb-6 pt-4">
-      <PageHeader title="Saved" subtitle="Keeps itineraries, eateries, hikes, hosts, maps you loved." />
-
-      <EmptyState
-        title="No saved drops yet"
-        description="Bookmark a trip recap or map pack and Trav will tuck it neatly into this stash."
-      />
+    <div className="min-h-[100vh] bg-gradient-to-b from-[#f4fbf1] via-white to-[#fcfbf9] text-neutral-900">
+      <div className="mx-auto max-w-lg px-4 sm:max-w-xl sm:px-5">
+        <SavedDestinationsExperience />
+      </div>
     </div>
   );
 }

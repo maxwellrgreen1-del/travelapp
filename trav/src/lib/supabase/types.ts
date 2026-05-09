@@ -4,7 +4,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 /**
  * Database shape for `@supabase/ssr` / `supabase-js` generics.
- * Replace by generating from your hosted project once tables exist:
+ * Hand-maintained MVP slice — regenerate once full schema ships:
  *
  * ```
  * npx supabase gen types typescript --project-id <PROJECT_REF> --schema public > src/lib/supabase/types.ts
@@ -12,7 +12,41 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
  */
 export type Database = {
   public: {
-    Tables: Record<string, never>;
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: Record<string, never>;

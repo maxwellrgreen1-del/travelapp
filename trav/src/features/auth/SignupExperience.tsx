@@ -17,17 +17,16 @@ import {
 } from "@/features/auth/authValidation";
 import { AuthBrandHeader } from "@/features/auth/components/AuthBrandHeader";
 import { AuthOAuthRow } from "@/features/auth/components/AuthOAuthRow";
+import { mapSupabaseAuthError } from "@/features/auth/mapSupabaseAuthError";
+import { insertProfileRow } from "@/features/auth/profileBootstrap";
+import { createClient } from "@/lib/supabase/client";
 
 type FieldErrors = Partial<Record<"name" | "username" | "email" | "password" | "confirmPassword", string>>;
 
-async function pretendSignupDelay(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, 520);
-  });
-}
-
 export function SignupExperience() {
   const router = useRouter();
+  const [supabase] = useState(() => createClient());
+
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -35,6 +34,8 @@ export function SignupExperience() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const pruneError = <K extends keyof FieldErrors>(key: K) => {
     setFieldErrors((prev) => {
@@ -43,6 +44,8 @@ export function SignupExperience() {
       delete draft[key];
       return draft;
     });
+    setAuthError(null);
+    setInfoMessage(null);
   };
 
   const onNameChange: ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -119,11 +122,72 @@ export function SignupExperience() {
       return;
     }
 
+    const normalizedUsername = username.trim().toLowerCase();
+    const displayName = name.trim();
+
     async function finalize() {
       setBusy(true);
+      setAuthError(null);
+      setInfoMessage(null);
+
       try {
-        await pretendSignupDelay();
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              username: normalizedUsername,
+              display_name: displayName,
+            },
+          },
+        });
+
+        if (error) {
+          setAuthError(mapSupabaseAuthError(error));
+          return;
+        }
+
+        const session = data.session;
+        const newUser = data.user;
+
+        if (!newUser) {
+          setAuthError("Could not create your traveller record — try again.");
+          return;
+        }
+
+        /** Email confirmation enabled in Supabase → no session yet; profile row is created on first login. */
+        if (!session) {
+          setInfoMessage(
+            "Check your inbox to confirm your email — once confirmed, log in and tript will finish your profile automatically.",
+          );
+          return;
+        }
+
+        const { error: profileError } = await insertProfileRow(supabase, {
+          userId: newUser.id,
+          username: normalizedUsername,
+          displayName,
+        });
+
+        if (profileError) {
+          const code = "code" in profileError ? String((profileError as { code?: string }).code) : "";
+          const msg = profileError.message ?? "";
+
+          await supabase.auth.signOut();
+
+          if (code === "23505" || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+            setAuthError("That trail username is already taken — pick another handle.");
+            return;
+          }
+
+          setAuthError(
+            "Auth succeeded but we could not save your profile — try again or message support with this hint: " + msg,
+          );
+          return;
+        }
+
         router.replace("/");
+        router.refresh();
       } finally {
         setBusy(false);
       }
@@ -137,7 +201,7 @@ export function SignupExperience() {
       <AuthBrandHeader
         eyebrow="Join the scouts"
         title="Raise your tript sails"
-        subtitle="Mock rails only for tript — your itinerary vault materialises once Supabase ferries payloads. Rehearsal fields stay gorgeous till then."
+        subtitle="Create a Supabase-backed passport — your profile row lands beside auth automatically when email confirmation is off or after your first confirmed login."
         className="pb-10"
       />
 
@@ -208,13 +272,26 @@ export function SignupExperience() {
             </div>
           </fieldset>
 
+          {authError ? (
+            <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-[14px] py-3 text-[13px] font-medium leading-relaxed text-red-800">
+              {authError}
+            </p>
+          ) : null}
+
+          {infoMessage ? (
+            <p role="status" className="rounded-2xl border border-primary/35 bg-primary/10 px-[14px] py-3 text-[13px] font-medium leading-relaxed text-neutral-800">
+              {infoMessage}
+            </p>
+          ) : null}
+
           <div className="space-y-[18px] pt-1">
             <Button type="submit" variant="primary" size="lg" fullWidth disabled={busy}>
               {busy ? "Carving stamps…" : "Create tript account"}
             </Button>
 
             <p className="px-px text-[12px] leading-relaxed text-neutral-600">
-              By continuing you agree tript’s etiquette — stay kind to hosts, tides, gate agents, wild critters… even during mock rehearsals.
+              By continuing you agree tript’s etiquette — stay kind to hosts, tides, gate agents, wild critters… even during
+              mock rehearsals.
             </p>
           </div>
         </form>

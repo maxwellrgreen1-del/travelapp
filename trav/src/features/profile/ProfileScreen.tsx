@@ -1,3 +1,4 @@
+import { LogoutSection } from "@/features/auth/components/LogoutSection";
 import { DestinationPreviewCard } from "@/features/profile/components/DestinationPreviewCard";
 import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
 import { ProfilePostGrid } from "@/features/profile/components/ProfilePostGrid";
@@ -49,6 +50,8 @@ export function ProfileScreen() {
             </ul>
           </div>
         </section>
+
+        <LogoutSection variant="profile" />
       </main>
     </div>
   );

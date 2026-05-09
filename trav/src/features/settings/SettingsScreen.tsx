@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { LogoutSection } from "@/features/auth/components/LogoutSection";
 
 export function SettingsScreen() {
   return (
@@ -9,6 +10,8 @@ export function SettingsScreen() {
       <PageHeader title="Settings" subtitle="Notifications, accessibility, downloads, logout." />
 
       <EmptyState title="Panels loading soon" description="Toggle push paths, mute cities, tweak map exports." />
+
+      <LogoutSection variant="settings" />
 
       <p className="text-center text-xs text-neutral-400">
         <Link href="/profile" className="underline underline-offset-4 hover:text-neutral-700">

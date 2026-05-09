@@ -1,0 +1,130 @@
+import type { TravelFeedPost } from "@/types";
+
+/**
+ * Imaginary travelers + real-world inspired stops.
+ * Uses Unsplash JPGs purely as remote placeholders until Trav uploads arrive.
+ */
+export const mockTravelPosts: TravelFeedPost[] = [
+  {
+    id: "post-banff-canoe-m",
+    username: "maya.outbound",
+    userInitials: "MO",
+    locationDisplay: "Moraine Lake · Canada",
+    imageUrl:
+      "https://images.unsplash.com/photo-1549880338-65ddcdfdcab6?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Turquoise glacier lake edged by evergreen forest and towering peaks.",
+    title: "Dawn canoe before the alpine wind picks up.",
+    description: "Camp coffee, teal water, silence except for elk bugles far off ridge.",
+    likesCount: 1284,
+    commentsCount: 58,
+    destinationTags: ["Rockies", "Glacier teal"],
+    postedAtISO: "2026-05-09T13:05:00.000Z",
+  },
+  {
+    id: "post-lisbon-tram-l",
+    username: "_liamfog",
+    userInitials: "LF",
+    locationDisplay: "Alfama · Lisbon",
+    imageUrl:
+      "https://images.unsplash.com/photo-1585208798174-6ced06386d03?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Yellow Lisbon tram climbs a narrow hillside street over terracotta rooftops.",
+    title: "Riding tram 28 till the custard tarts cooled.",
+    description: "Pocket map drenched in miradouro light. Fado leaking from half-open kitchens.",
+    likesCount: 942,
+    commentsCount: 33,
+    destinationTags: ["Iberia tiles", "Coastal dusk"],
+    postedAtISO: "2026-05-09T09:00:00.000Z",
+  },
+  {
+    id: "post-kyoto-gate-z",
+    username: "zara.nomads",
+    userInitials: "ZN",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&w=240&q=80&fit=crop&h=240",
+    locationDisplay: "Fushimi Inari · Kyoto",
+    imageUrl:
+      "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Rows of glowing vermilion shrine gates fading into forested hillside curve.",
+    title: "Ran the torii ramps before incense smoke thickened.",
+    description: "Chilled bottled tea on the hillside + soft rain on umbrellas below.",
+    likesCount: 2401,
+    commentsCount: 112,
+    destinationTags: ["Temple trail", "Moss mist"],
+    postedAtISO: "2026-05-08T18:42:00.000Z",
+  },
+  {
+    id: "post-marrakech-riad-r",
+    username: "riad_runner",
+    userInitials: "RR",
+    locationDisplay: "Medina · Marrakech",
+    imageUrl:
+      "https://images.unsplash.com/photo-1547036967-23d11aaca7fb?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Ornate courtyard pool reflecting carved plaster arches overhead.",
+    title: "Riad courtyard naps until the muezzin floated in.",
+    description: "Rose harira, pomegranate juice, barefoot tiles still warm from midday sun.",
+    likesCount: 687,
+    commentsCount: 21,
+    destinationTags: ["Atlas edge", "Spice dusk"],
+    postedAtISO: "2026-05-07T09:05:00.000Z",
+  },
+  {
+    id: "post-patagonia-trek-t",
+    username: "tomas_viaja",
+    userInitials: "TV",
+    locationDisplay: "Torres del Paine · Chile",
+    imageUrl:
+      "https://images.unsplash.com/photo-1518182170300-596cc302faac?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Jagged granite towers bathed in pink sunrise framed by teal glacial lagoon.",
+    title: "Camped gale-side to catch granite turning rose.",
+    description: "Guancos wandered base camp. Thermos yerba steamed more than sunrise did.",
+    likesCount: 1876,
+    commentsCount: 74,
+    destinationTags: ["Windward peaks", "Trek hut"],
+    postedAtISO: "2026-05-06T06:03:11.000Z",
+  },
+  {
+    id: "post-safari-ngong-n",
+    username: "nora.bushplane",
+    userInitials: "NB",
+    locationDisplay: "Maasai Mara · Kenya",
+    imageUrl:
+      "https://images.unsplash.com/photo-1547471080-7cc2caa01fca?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Wide savannah horizon with elephants crossing ochre grasses at golden hour.",
+    title: "Dust hung like cinnamon while the lions napped midfield.",
+    description: "Tiny plane hop from Nairobi landed us barefoot on russet runways.",
+    likesCount: 2155,
+    commentsCount: 96,
+    destinationTags: ["Golden hour sweep", "Overland"],
+    postedAtISO: "2026-05-03T06:58:41.000Z",
+  },
+  {
+    id: "post-meteora-cliff-s",
+    username: "sofia.routes",
+    userInitials: "SR",
+    locationDisplay: "Meteora · Greece",
+    imageUrl:
+      "https://images.unsplash.com/photo-1603565816030-eb2a578c6c32?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Stone monastery perched atop dramatic sandstone pillar against blue dusk sky.",
+    title: "Hiked sandstone teeth to choral vespers at dusk.",
+    description: "Monk bells + cicadas echoed off cliffs long after lanterns flickered alive.",
+    likesCount: 1503,
+    commentsCount: 47,
+    destinationTags: ["Cliff-lit", "Cycladic week"],
+    postedAtISO: "2026-04-29T06:54:54.000Z",
+  },
+  {
+    id: "post-bagan-balloon-d",
+    username: "devon.stowaway",
+    userInitials: "DS",
+    locationDisplay: "Bagan Plains · Myanmar",
+    imageUrl:
+      "https://images.unsplash.com/photo-1553603227-2358aeeb821e?auto=format&w=880&q=80&fit=crop",
+    imageAlt: "Dozens of hot air balloons float over misty plains dotted with brick temples.",
+    title: "Balloon wicker still cold before the mist burned off.",
+    description: "Hundreds of stupas surfaced like vertebrae—the whole plain exhaled coriander smoke.",
+    likesCount: 3308,
+    commentsCount: 144,
+    destinationTags: ["Bagan balloons", "Mosaic dawn"],
+    postedAtISO: "2026-04-26T06:52:54.000Z",
+  },
+];

@@ -1,0 +1,27 @@
+/**
+ * Shared domain types will live here.
+ * Mock-friendly shapes evolve into Sup-backed models later.
+ */
+
+export type Id = string;
+
+export type TravelFeedPost = {
+  id: Id;
+  username: string;
+  userInitials: string;
+  /** Optional staged portrait URLs before Supabase media lands. */
+  avatarUrl?: string;
+  /** Display place string like "Laguna Llaca · Peru". */
+  locationDisplay: string;
+  /** Scenic preview for the itinerary card — becomes multi-media later. */
+  imageUrl: string;
+  imageAlt: string;
+  title: string;
+  /** Short teaser under the headline. */
+  description: string;
+  likesCount: number;
+  commentsCount: number;
+  /** Hashtagged city or region vibes. */
+  destinationTags?: string[];
+  postedAtISO: string;
+};

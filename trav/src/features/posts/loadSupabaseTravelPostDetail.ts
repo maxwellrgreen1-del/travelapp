@@ -1,5 +1,6 @@
 import type { TravelPostDetail } from "@/types";
 
+import { loadCommentsForPost } from "@/features/posts/comments/loadCommentsForPost";
 import { createClient } from "@/lib/supabase/server";
 import { isPersistentPostId } from "@/lib/postIds";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
@@ -66,10 +67,13 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     ? supabase.from("saves").select("post_id").eq("post_id", requestedId).eq("user_id", viewerId).maybeSingle()
     : emptyViewer;
 
-  const [likesHead, viewerLikeRes, viewerSaveRes] = await Promise.all([
+  const commentsPromise = loadCommentsForPost(supabase, requestedId);
+
+  const [likesHead, viewerLikeRes, viewerSaveRes, commentsPack] = await Promise.all([
     totalLikesPromise,
     viewerLikePromise,
     viewerSavePromise,
+    commentsPromise,
   ]);
 
   const likesCount =
@@ -86,7 +90,7 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     title: post.title,
     description: post.description ?? "",
     likesCount,
-    commentsCount: 0,
+    commentsCount: commentsPack.count,
     viewerHasLiked: Boolean(viewerLikeRes.data),
     viewerHasSaved: Boolean(viewerSaveRes.data),
     destinationTags: [],
@@ -98,5 +102,7 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     restaurants: [],
     externalLinks: [],
     commentPreview: [],
+    commentsFromDb: commentsPack.items,
+    commentsLoadError: commentsPack.errorMessage,
   };
 }

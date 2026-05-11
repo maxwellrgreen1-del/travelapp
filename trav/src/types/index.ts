@@ -39,6 +39,18 @@ export type TravelPostCommentPreview = {
   postedAtISO: string;
 };
 
+/** Thread row loaded from Supabase `comments` (+ author profile joins). */
+export type TravelPostComment = {
+  id: Id;
+  authorId: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl?: string;
+  initials: string;
+  body: string;
+  postedAtISO: string;
+};
+
 /** Full traveller log once detail views hydrate richer copy than timeline cards allow. */
 export type TravelPostDetail = TravelFeedPost & {
   journal: string;
@@ -46,4 +58,11 @@ export type TravelPostDetail = TravelFeedPost & {
   restaurants: string[];
   externalLinks: { label: string; url: string }[];
   commentPreview: TravelPostCommentPreview[];
+  /**
+   * When set (typically UUID posts only), renders the Supabase-backed thread rather than seeded `commentPreview`.
+   * Empty array is valid — explorers just have not weighed in yet.
+   */
+  commentsFromDb?: TravelPostComment[];
+  /** When Postgres could not list comments (RLS glitch, network); UI can offer retry guidance. */
+  commentsLoadError?: string | null;
 };

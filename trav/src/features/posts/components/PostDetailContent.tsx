@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -5,19 +9,27 @@ import { Card } from "@/components/ui/Card";
 import type { TravelPostDetail } from "@/types";
 
 import { PostActions } from "@/features/feed/components/PostActions";
-
-import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import { PostCommentsSection } from "@/features/posts/comments/PostCommentsSection";
 import { CommentPreviewList } from "@/features/posts/components/CommentPreviewList";
 import { ExternalLinksList } from "@/features/posts/components/ExternalLinksList";
 import { PlacesVisitedList } from "@/features/posts/components/PlacesVisitedList";
 import { RestaurantRecommendationList } from "@/features/posts/components/RestaurantRecommendationList";
+
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
 
 type PostDetailContentProps = {
   detail: TravelPostDetail;
 };
 
 export function PostDetailContent({ detail }: PostDetailContentProps) {
+  const [liveCommentCount, setLiveCommentCount] = useState(detail.commentsCount);
+
+  useEffect(() => {
+    setLiveCommentCount(detail.commentsCount);
+  }, [detail.id, detail.commentsCount]);
+
   const postedPhrase = formatRelativeTime(new Date(detail.postedAtISO));
+  const usesSupabaseThread = detail.commentsFromDb !== undefined;
 
   return (
     <div className="relative z-30 -mt-14 space-y-8 rounded-t-[42px] border border-transparent bg-[#fcfbf9] px-6 pb-24 pt-[36px] shadow-[0_-30px_60px_-25px_rgba(15,23,42,0.45)] sm:rounded-t-[48px] sm:pb-28 sm:pt-10 lg:-mt-[4.5rem]">
@@ -46,7 +58,7 @@ export function PostDetailContent({ detail }: PostDetailContentProps) {
               <PostActions
                 postId={detail.id}
                 initialLikeCount={detail.likesCount}
-                commentsCount={detail.commentsCount}
+                commentsCount={liveCommentCount}
                 initialViewerHasLiked={detail.viewerHasLiked}
                 initialViewerHasSaved={detail.viewerHasSaved}
               />
@@ -80,7 +92,21 @@ export function PostDetailContent({ detail }: PostDetailContentProps) {
       <PlacesVisitedList places={detail.placesVisited} />
       <RestaurantRecommendationList restaurants={detail.restaurants} />
       <ExternalLinksList links={detail.externalLinks} />
-      <CommentPreviewList comments={detail.commentPreview} tone={`${detail.commentsCount} scouts chimed globally`} />
+
+      {usesSupabaseThread ? (
+        <PostCommentsSection
+          postId={detail.id}
+          initialComments={detail.commentsFromDb ?? []}
+          initialTotalCount={detail.commentsCount}
+          loadError={detail.commentsLoadError ?? null}
+          onCountChange={setLiveCommentCount}
+        />
+      ) : (
+        <CommentPreviewList
+          comments={detail.commentPreview}
+          tone={`${detail.commentsCount} scouts chimed globally`}
+        />
+      )}
     </div>
   );
 }

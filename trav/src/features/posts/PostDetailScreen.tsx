@@ -57,7 +57,7 @@ export function PostDetailScreen({ requestedId, detail }: PostDetailScreenProps)
         }}
       />
 
-      <PostDetailContent detail={detail} />
+      <PostDetailContent key={detail.id} detail={detail} />
     </article>
   );
 }

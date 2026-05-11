@@ -1,61 +1,80 @@
-import Link from "next/link";
+"use client";
 
-import { PageHeader } from "@/components/ui/PageHeader";
+import { useRouter } from "next/navigation";
+
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedComposerCTA } from "@/features/feed/components/FeedComposerCTA";
+import type { HomeFeedResult } from "@/features/feed/loadHomeFeedPayload";
+import { HomeFeedLayout } from "@/features/feed/HomeFeedLayout";
 import { PostCard } from "@/features/feed/components/PostCard";
-import { mockTravelPosts } from "@/features/feed/mockTravelPosts";
 import { APP_NAME } from "@/lib/constants";
 
-export function HomeFeed() {
-  return (
-    <div className="min-h-[100vh] bg-gradient-to-b from-[#fafaf8] via-white to-neutral-50 text-neutral-900">
-      <div className="sticky top-0 z-30 border-b border-neutral-100/70 bg-neutral-50/90 px-4 py-4 backdrop-blur-md">
-        <PageHeader
-          title={
-            <span className="inline-flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.45em] text-primary/85">{APP_NAME}</span>
-              <span className="text-3xl font-semibold tracking-tight text-neutral-950">For You</span>
-            </span>
-          }
-          subtitle="Curated itineraries on tript from explorers you follow — or will follow once profiles sync."
-          trailing={<NotificationsBellLink />}
-          showBackNavigation={false}
-        />
-      </div>
+type HomeFeedProps = {
+  result: HomeFeedResult;
+};
 
+/** Client shell so readers can gently retry Postgres hiccups without leaving home. */
+export function HomeFeed({ result }: HomeFeedProps) {
+  const router = useRouter();
+
+  if (result.type === "error") {
+    return (
+      <HomeFeedLayout subtitle="Fresh trip recaps stream from Supabase when the wind cooperates — try reconnecting once.">
+        <div className="px-3 pb-8 pt-4 sm:px-4">
+          <EmptyState
+            title="The live feed hit turbulence"
+            description={result.message}
+            action={
+              <Button type="button" variant="primary" size="lg" className="px-8" onClick={() => router.refresh()}>
+                Retry feed load
+              </Button>
+            }
+            className="mt-4"
+          />
+        </div>
+      </HomeFeedLayout>
+    );
+  }
+
+  const { posts, usedMockFallback } = result;
+
+  return (
+    <HomeFeedLayout
+      subtitle={
+        usedMockFallback
+          ? `Seeded itineraries from ${APP_NAME} lore stand in until the first explorers publish publicly — Compose when you touch down.`
+          : "Fresh public trails from explorers on tript surface here first — seeded lore stays dormant while Postgres hums."
+      }
+    >
       <div className="space-y-5 px-3 pb-8 pt-4 sm:px-4">
-        <div className="sticky top-[2px] z-20 pb-3">
+        <div className="sticky top-[2px] z-20 space-y-3 pb-3">
           <FeedComposerCTA />
+
+          {usedMockFallback ? (
+            <Card
+              tone="muted"
+              padding="sm"
+              className="border-dashed border-primary/35 bg-white/95 text-[13px] leading-relaxed text-neutral-700"
+            >
+              <p className="font-semibold text-neutral-950">Practice runway mode</p>
+              <p>
+                Postgres did not surface any readable public logs yet — you are scrolling the lovingly mocked catalog. Publish from{" "}
+                <strong className="text-primary">Create</strong> to light up Supabase-backed cards for everyone signed in as your audience.
+              </p>
+            </Card>
+          ) : null}
         </div>
 
         <ol className="flex list-none flex-col gap-9" aria-label={`${APP_NAME} travel feed timeline`}>
-          {mockTravelPosts.map((post) => (
+          {posts.map((post) => (
             <li key={post.id}>
               <PostCard post={post} />
             </li>
           ))}
         </ol>
       </div>
-    </div>
-  );
-}
-
-function NotificationsBellLink() {
-  return (
-    <Link
-      href="/notifications"
-      aria-label="Notifications"
-      className="rounded-xl bg-white/90 p-2 text-neutral-800 shadow-sm shadow-neutral-950/15 outline-none ring-primary/30 backdrop-blur transition hover:bg-primary/10 hover:text-primary focus-visible:ring-4"
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 4a6 6 0 0 1 6 6v3.382l3 4.118H3l3-4.118V10a6 6 0 0 1 6-6Z"
-          stroke="currentColor"
-          strokeWidth="1.85"
-          strokeLinejoin="round"
-        />
-        <path d="M9 19a3 3 0 1 0 6 0" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" />
-      </svg>
-    </Link>
+    </HomeFeedLayout>
   );
 }

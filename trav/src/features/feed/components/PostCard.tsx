@@ -57,6 +57,13 @@ export function PostCard({ post }: PostCardProps) {
           <p className="text-[14px] leading-relaxed text-neutral-700">{post.description}</p>
         </div>
 
+        {post.placesPreview && post.placesPreview.length ? (
+          <div className="rounded-[18px] border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-white to-primary/[0.04] px-[14px] py-3 shadow-inner shadow-primary/15">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">Trail stops preview</p>
+            <p className="mt-1 text-[13px] font-medium leading-relaxed text-neutral-800">{post.placesPreview.join(" → ")}</p>
+          </div>
+        ) : null}
+
         {post.destinationTags && post.destinationTags.length ? (
           <div className="flex flex-wrap gap-2 pt-2">
             {post.destinationTags.map((tag) => (

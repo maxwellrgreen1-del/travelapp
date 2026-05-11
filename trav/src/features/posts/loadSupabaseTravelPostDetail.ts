@@ -1,28 +1,14 @@
 import type { TravelPostDetail } from "@/types";
 
 import { createClient } from "@/lib/supabase/server";
-
-/** Hero image when Storage-backed galleries are empty (matches tript moss / trail palette). */
-const SUPABASE_POST_PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&w=980&q=80&fit=crop";
+import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
+import { initialsFromProfile } from "@/lib/userDisplay";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function looksLikeUuid(id: string): boolean {
   return UUID_RE.test(id);
-}
-
-function initialsFromProfile(username: string, displayName: string | null): string {
-  const name = displayName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  }
-  return username.slice(0, 2).toUpperCase();
 }
 
 /**
@@ -72,8 +58,8 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     userInitials: initialsFromProfile(author.username, author.display_name ?? null),
     avatarUrl: author.avatar_url?.trim() || undefined,
     locationDisplay: locationLine,
-    imageUrl: SUPABASE_POST_PLACEHOLDER_IMAGE,
-    imageAlt: "Travel journal collage placeholder until Supabase Storage frames land.",
+    imageUrl: SUPABASE_TRAVEL_CARD_IMAGE_URL,
+    imageAlt: SUPABASE_TRAVEL_CARD_IMAGE_ALT,
     title: post.title,
     description: post.description ?? "",
     likesCount: 0,

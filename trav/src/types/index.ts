@@ -23,6 +23,8 @@ export type TravelFeedPost = {
   commentsCount: number;
   /** Hashtagged city or region vibes. */
   destinationTags?: string[];
+  /** Up to a few waypoint names for the feed teaser (maps from `post_locations`). */
+  placesPreview?: string[];
   postedAtISO: string;
 };
 

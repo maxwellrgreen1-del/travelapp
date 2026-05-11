@@ -1,44 +1,149 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useAuthSession } from "@/features/auth/AuthSessionProvider";
+import { likePost, savePost, unlikePost, unsavePost } from "@/features/engagement/supabaseLikeSave";
+import { isPersistentPostId } from "@/lib/postIds";
+import { createClient } from "@/lib/supabase/client";
 import { cx } from "@/lib/utils";
 
 type PostActionsProps = {
   postId: string;
   initialLikeCount: number;
   commentsCount: number;
+  /** Hydrated on the server for Supabase UUID posts; mock slugs omit these. */
+  initialViewerHasLiked?: boolean;
+  initialViewerHasSaved?: boolean;
   /** Share an anchor with the eventual comments rail. */
   commentHrefFragment?: string;
 };
 
 /**
- * Thumb-scale controls with optimistic-ish counts for mocked posts.
+ * Feed + detail controls: mock slugs stay purely local, UUID posts sync likes/saves through Supabase with optimistic counts.
  */
 export function PostActions({
   postId,
   initialLikeCount,
   commentsCount,
+  initialViewerHasLiked = false,
+  initialViewerHasSaved = false,
   commentHrefFragment = "comments",
 }: PostActionsProps) {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuthSession();
+  const [supabase] = useState(() => createClient());
+
+  const persistEngagement = useMemo(() => isPersistentPostId(postId), [postId]);
+
+  const [liked, setLiked] = useState(initialViewerHasLiked);
+  const [saved, setSaved] = useState(initialViewerHasSaved);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
+
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLikeCount(initialLikeCount);
+    setLiked(initialViewerHasLiked);
+    setSaved(initialViewerHasSaved);
+    setActionError(null);
+    setLikeBusy(false);
+    setSaveBusy(false);
+  }, [postId, initialLikeCount, initialViewerHasLiked, initialViewerHasSaved]);
+
+  useEffect(() => {
+    if (!actionError) {
+      return;
+    }
+    const t = window.setTimeout(() => setActionError(null), 7000);
+    return () => window.clearTimeout(t);
+  }, [actionError]);
 
   const commentHref = `/post/${postId}#${commentHrefFragment}`;
 
-  function toggleLike() {
+  const likeControlDisabled = persistEngagement && (authLoading || likeBusy);
+  const saveControlDisabled = persistEngagement && (authLoading || saveBusy);
+
+  const toggleLikeMock = useCallback(() => {
     setLiked((current) => {
       const next = !current;
       setLikeCount((count) => Math.max(0, count + (next ? 1 : -1)));
       return next;
     });
-  }
+  }, []);
 
-  function toggleSave() {
-    setSaved((value) => !value);
-  }
+  const handleToggleLike = useCallback(async () => {
+    if (!persistEngagement) {
+      toggleLikeMock();
+      return;
+    }
+    if (authLoading) {
+      return;
+    }
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (likeBusy) {
+      return;
+    }
+
+    const nextLiked = !liked;
+    const rollbackLiked = liked;
+    const rollbackCount = likeCount;
+
+    setLikeBusy(true);
+    setActionError(null);
+    setLiked(nextLiked);
+    setLikeCount((count) => Math.max(0, count + (nextLiked ? 1 : -1)));
+
+    const result = nextLiked ? await likePost(supabase, user.id, postId) : await unlikePost(supabase, user.id, postId);
+
+    setLikeBusy(false);
+
+    if (!result.ok) {
+      setLiked(rollbackLiked);
+      setLikeCount(rollbackCount);
+      setActionError(result.message);
+    }
+  }, [persistEngagement, authLoading, user, likeBusy, liked, likeCount, router, supabase, postId, toggleLikeMock]);
+
+  const handleToggleSave = useCallback(async () => {
+    if (!persistEngagement) {
+      setSaved((value) => !value);
+      return;
+    }
+    if (authLoading) {
+      return;
+    }
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (saveBusy) {
+      return;
+    }
+
+    const nextSaved = !saved;
+    const rollbackSaved = saved;
+
+    setSaveBusy(true);
+    setActionError(null);
+    setSaved(nextSaved);
+
+    const result = nextSaved ? await savePost(supabase, user.id, postId) : await unsavePost(supabase, user.id, postId);
+
+    setSaveBusy(false);
+
+    if (!result.ok) {
+      setSaved(rollbackSaved);
+      setActionError(result.message);
+    }
+  }, [persistEngagement, authLoading, user, saveBusy, saved, router, supabase, postId]);
 
   return (
     <div className="space-y-2">
@@ -46,9 +151,14 @@ export function PostActions({
         <div className="flex items-center gap-5">
           <button
             type="button"
-            onClick={toggleLike}
-            className="-m-2 rounded-xl p-2 outline-none ring-primary/30 transition hover:bg-primary/10 active:scale-[0.96] focus-visible:ring-4"
+            onClick={() => void handleToggleLike()}
+            disabled={likeControlDisabled}
+            className={cx(
+              "-m-2 rounded-xl p-2 outline-none ring-primary/30 transition hover:bg-primary/10 active:scale-[0.96] focus-visible:ring-4",
+              likeControlDisabled ? "opacity-55" : "",
+            )}
             aria-pressed={liked}
+            aria-busy={likeBusy}
             aria-label={liked ? "Unlike itinerary" : "Like itinerary"}
           >
             <HeartIcon filled={liked} className={liked ? "text-primary drop-shadow-[0_0_6px_rgba(133,187,101,0.55)]" : "text-neutral-800"} />
@@ -68,14 +178,25 @@ export function PostActions({
 
         <button
           type="button"
-          onClick={toggleSave}
-          className="-m-2 rounded-xl p-2 outline-none ring-primary/30 transition hover:bg-primary/10 active:scale-[0.96] focus-visible:ring-4"
+          onClick={() => void handleToggleSave()}
+          disabled={saveControlDisabled}
+          className={cx(
+            "-m-2 rounded-xl p-2 outline-none ring-primary/30 transition hover:bg-primary/10 active:scale-[0.96] focus-visible:ring-4",
+            saveControlDisabled ? "opacity-55" : "",
+          )}
           aria-pressed={saved}
+          aria-busy={saveBusy}
           aria-label={saved ? "Remove from tript saves" : "Save itinerary"}
         >
           <RibbonIcon bookmarked={saved} className={saved ? "text-primary" : "text-neutral-800"} />
         </button>
       </div>
+
+      {actionError ? (
+        <p role="alert" className="text-xs font-medium leading-relaxed text-red-600">
+          {actionError}
+        </p>
+      ) : null}
 
       <div className="space-y-2 text-sm leading-relaxed text-neutral-900">
         {likeCount > 0 ? (
@@ -88,6 +209,10 @@ export function PostActions({
           <p className="text-neutral-500">Be first to cheer this leg of the trail.</p>
         )}
 
+        {persistEngagement && saved ? (
+          <p className="text-[13px] font-semibold text-primary">Pinned privately — only you see this bookmark row in Supabase for now.</p>
+        ) : null}
+
         {commentsCount > 0 ? (
           <Link
             href={commentHref}
@@ -96,7 +221,7 @@ export function PostActions({
             View all {commentsCount.toLocaleString()} comments
           </Link>
         ) : (
-          <p className="text-neutral-500 text-xs">Trail notes open once friends comment.</p>
+          <p className="text-xs text-neutral-500">Trail notes open once friends comment.</p>
         )}
       </div>
     </div>

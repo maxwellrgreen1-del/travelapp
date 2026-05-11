@@ -21,6 +21,9 @@ export type TravelFeedPost = {
   description: string;
   likesCount: number;
   commentsCount: number;
+  /** Present on Supabase-backed cards when the session is known during SSR. */
+  viewerHasLiked?: boolean;
+  viewerHasSaved?: boolean;
   /** Hashtagged city or region vibes. */
   destinationTags?: string[];
   /** Up to a few waypoint names for the feed teaser (maps from `post_locations`). */

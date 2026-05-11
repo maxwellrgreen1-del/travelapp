@@ -1,22 +1,16 @@
 import type { TravelPostDetail } from "@/types";
 
 import { createClient } from "@/lib/supabase/server";
+import { isPersistentPostId } from "@/lib/postIds";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
 import { initialsFromProfile } from "@/lib/userDisplay";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function looksLikeUuid(id: string): boolean {
-  return UUID_RE.test(id);
-}
 
 /**
  * When the URL does not resolve to a seeded mock ID, hydrate from Supabase (public posts readable to everyone;
  * private posts only when the SSR session owns the row — RLS enforces visibility).
  */
 export async function loadSupabaseTravelPostDetail(requestedId: string): Promise<TravelPostDetail | null> {
-  if (!looksLikeUuid(requestedId)) {
+  if (!isPersistentPostId(requestedId)) {
     return null;
   }
 
@@ -52,6 +46,35 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
 
   const locationLine = post.location_display?.trim() || "Waypoint trail";
 
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+  const viewerId = authUser?.id ?? null;
+
+  const totalLikesPromise = supabase
+    .from("likes")
+    .select("*", { count: "exact", head: true })
+    .eq("post_id", requestedId);
+
+  const emptyViewer = Promise.resolve({ data: null, error: null });
+
+  const viewerLikePromise = viewerId
+    ? supabase.from("likes").select("post_id").eq("post_id", requestedId).eq("user_id", viewerId).maybeSingle()
+    : emptyViewer;
+
+  const viewerSavePromise = viewerId
+    ? supabase.from("saves").select("post_id").eq("post_id", requestedId).eq("user_id", viewerId).maybeSingle()
+    : emptyViewer;
+
+  const [likesHead, viewerLikeRes, viewerSaveRes] = await Promise.all([
+    totalLikesPromise,
+    viewerLikePromise,
+    viewerSavePromise,
+  ]);
+
+  const likesCount =
+    likesHead.error || typeof likesHead.count !== "number" ? 0 : likesHead.count;
+
   return {
     id: post.id,
     username: author.username,
@@ -62,8 +85,10 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     imageAlt: SUPABASE_TRAVEL_CARD_IMAGE_ALT,
     title: post.title,
     description: post.description ?? "",
-    likesCount: 0,
+    likesCount,
     commentsCount: 0,
+    viewerHasLiked: Boolean(viewerLikeRes.data),
+    viewerHasSaved: Boolean(viewerSaveRes.data),
     destinationTags: [],
     postedAtISO: post.created_at,
     journal:

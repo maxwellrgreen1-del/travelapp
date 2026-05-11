@@ -40,7 +40,13 @@ export function PostCard({ post }: PostCardProps) {
       </Link>
 
       <section className="space-y-3 px-4 pb-5 pt-3">
-        <PostActions postId={post.id} initialLikeCount={post.likesCount} commentsCount={post.commentsCount} />
+        <PostActions
+          postId={post.id}
+          initialLikeCount={post.likesCount}
+          commentsCount={post.commentsCount}
+          initialViewerHasLiked={post.viewerHasLiked}
+          initialViewerHasSaved={post.viewerHasSaved}
+        />
 
         <div className="space-y-3">
           <p id={`caption-${post.id}`} className="text-[15px] leading-6">

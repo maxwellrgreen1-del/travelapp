@@ -43,7 +43,13 @@ export function PostDetailContent({ detail }: PostDetailContentProps) {
                 </time>
               </div>
               <p className="text-[17px] font-semibold uppercase tracking-[0.28em] text-primary drop-shadow">{detail.locationDisplay}</p>
-              <PostActions postId={detail.id} initialLikeCount={detail.likesCount} commentsCount={detail.commentsCount} />
+              <PostActions
+                postId={detail.id}
+                initialLikeCount={detail.likesCount}
+                commentsCount={detail.commentsCount}
+                initialViewerHasLiked={detail.viewerHasLiked}
+                initialViewerHasSaved={detail.viewerHasSaved}
+              />
             </div>
           </div>
         </section>

@@ -52,13 +52,15 @@ export function SuggestedTravelerCard({ traveler }: SuggestedTravelerCardProps) 
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {traveler.signatureTags.map((slug) => (
-            <Badge key={`${traveler.id}-${slug}`} tone={categoryTone[slug] ?? "neutral"} className="text-[11px] font-semibold">
-              #{slug}
-            </Badge>
-          ))}
-        </div>
+        {traveler.signatureTags.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {traveler.signatureTags.map((slug) => (
+              <Badge key={`${traveler.id}-${slug}`} tone={categoryTone[slug] ?? "neutral"} className="text-[11px] font-semibold">
+                #{slug}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
 
         <p className="text-sm leading-relaxed text-neutral-600">{traveler.tagline}</p>
 

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { LogoutSection } from "@/features/auth/components/LogoutSection";
-import { insertProfileRow } from "@/features/auth/profileBootstrap";
 import { useRequireAuth } from "@/lib/auth/useRequireAuth";
 import { createClient } from "@/lib/supabase/client";
 import { DestinationPreviewCard } from "@/features/profile/components/DestinationPreviewCard";
@@ -21,15 +20,10 @@ import {
   mockSavedDestinationBoard,
   mockTravelerSocial,
 } from "@/features/profile/mockTravelerProfile";
-import { deriveDisplayNameFromUser, deriveUsernameFromUser, toProfileHeaderViewModel } from "@/features/profile/profileAuthAdapter";
+import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
+import { toProfileHeaderViewModel } from "@/features/profile/profileAuthAdapter";
 
 type ProfileLoadState = "loading" | "ready" | "error";
-
-function isDuplicateConflict(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code === "23505") return true;
-  return error.message?.toLowerCase().includes("duplicate") ?? false;
-}
 
 export function ProfileScreen() {
   const { user, isLoading: authLoading } = useRequireAuth();
@@ -51,49 +45,15 @@ export function ProfileScreen() {
       setProfileState("loading");
       setProfileError(null);
 
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", authedUser.id).maybeSingle();
-
-      if (error) {
-        if (!cancelled) {
-          setProfileState("error");
-          setProfileError("Could not load your tript profile yet. Please try again.");
-        }
-        return;
-      }
-
-      let row = data;
-
-      if (!row) {
-        const username = deriveUsernameFromUser(authedUser);
-        const displayName = deriveDisplayNameFromUser(authedUser);
-        const { error: insertError } = await insertProfileRow(supabase, {
-          userId: authedUser.id,
-          username,
-          displayName,
-        });
-
-        if (insertError && !isDuplicateConflict(insertError)) {
-          if (!cancelled) {
-            setProfileState("error");
-            setProfileError("We could not create your profile row yet. Please retry in a moment.");
-          }
-          return;
-        }
-
-        const followup = await supabase.from("profiles").select("*").eq("id", authedUser.id).maybeSingle();
-        if (followup.error || !followup.data) {
-          if (!cancelled) {
-            setProfileState("error");
-            setProfileError("Profile setup is taking longer than expected. Tap retry.");
-          }
-          return;
-        }
-
-        row = followup.data;
-      }
+      const result = await loadOrCreateProfileForUser(supabase, authedUser);
 
       if (!cancelled) {
-        setTraveler(toProfileHeaderViewModel(row, authedUser));
+        if (!result.ok) {
+          setProfileState("error");
+          setProfileError(result.error);
+          return;
+        }
+        setTraveler(toProfileHeaderViewModel(result.row, authedUser));
         setProfileState("ready");
       }
     }

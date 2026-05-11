@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,13 +10,12 @@ import { useRequireAuth } from "@/lib/auth/useRequireAuth";
 import { createClient } from "@/lib/supabase/client";
 import { DestinationPreviewCard } from "@/features/profile/components/DestinationPreviewCard";
 import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
-import { ProfilePostGrid } from "@/features/profile/components/ProfilePostGrid";
+import { ProfileAuthorPostsSection, type ProfileStoriesHydrationEvent } from "@/features/profile/components/ProfileAuthorPostsSection";
 import { ProfileStats } from "@/features/profile/components/ProfileStats";
 import { TravelMapPreview } from "@/features/profile/components/TravelMapPreview";
 import type { MockTravelerSocialProfile } from "@/features/profile/mockTravelerProfile";
 import {
   mockAtlasPins,
-  mockProfileTrailPosts,
   mockSavedDestinationBoard,
   mockTravelerSocial,
 } from "@/features/profile/mockTravelerProfile";
@@ -32,6 +31,19 @@ export function ProfileScreen() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [traveler, setTraveler] = useState<MockTravelerSocialProfile>(mockTravelerSocial);
   const [retryTick, setRetryTick] = useState(0);
+  const [storiesStat, setStoriesStat] = useState<{ pending: boolean; published: number }>({ pending: true, published: 0 });
+
+  const handleStoriesHydration = useCallback((event: ProfileStoriesHydrationEvent) => {
+    if (event.type === "loading") {
+      setStoriesStat((prev) => ({ ...prev, pending: true }));
+      return;
+    }
+    if (event.type === "success") {
+      setStoriesStat({ pending: false, published: event.totalPublished });
+      return;
+    }
+    setStoriesStat((prev) => ({ ...prev, pending: false }));
+  }, []);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -103,14 +115,17 @@ export function ProfileScreen() {
           stats={{
             followersCount: mockTravelerSocial.followersCount,
             followingCount: mockTravelerSocial.followingCount,
-            postsPublished: mockTravelerSocial.postsPublished,
+            postsPublished: storiesStat.published,
           }}
-          footnote="Feed, follower, and publishing totals stay mocked while profile identity comes from Supabase."
+          postsPublishedPending={storiesStat.pending}
+          footnote="Stories count syncs from Supabase; follower tallies stay preview-only."
         />
 
         <TravelMapPreview pins={mockAtlasPins} />
 
-        <ProfilePostGrid posts={mockProfileTrailPosts} />
+        {user ? (
+          <ProfileAuthorPostsSection authorId={user.id} onStoriesHydration={handleStoriesHydration} />
+        ) : null}
 
         <section aria-labelledby="saved-strip-heading" className="space-y-4 pb-8">
           <div className="space-y-1 px-2">

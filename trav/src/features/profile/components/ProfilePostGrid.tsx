@@ -1,12 +1,14 @@
 import Link from "next/link";
 
-import type { TravelerProfileGridPost } from "@/features/profile/mockTravelerProfile";
+import type { ProfileAuthorGridPost } from "@/features/profile/loadProfileAuthorPosts";
 import { cx } from "@/lib/utils";
 
 type ProfilePostGridProps = {
-  posts: TravelerProfileGridPost[];
+  posts: ProfileAuthorGridPost[];
   title?: string;
   subtitle?: string;
+  /** Turn off when a parent wraps the same heading outside (loading / empty shells). */
+  showHeading?: boolean;
 };
 
 /**
@@ -15,16 +17,19 @@ type ProfilePostGridProps = {
 export function ProfilePostGrid({
   posts,
   title = "Field notes on the mantle",
-  subtitle = "Tap any tile for the long-form riff — mock itineraries seeded on tript for now.",
+  subtitle = "Tap any waypoint for your Supabase recap — newest logs surface first.",
+  showHeading = true,
 }: ProfilePostGridProps) {
   return (
-    <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
-      <div className="space-y-2 px-1">
-        <h2 id="profile-trip-grid-heading" className="text-xs font-semibold uppercase tracking-[0.33em] text-primary">
-          {title}
-        </h2>
-        <p className="text-sm leading-relaxed text-neutral-600">{subtitle}</p>
-      </div>
+    <section aria-labelledby={showHeading ? "profile-trip-grid-heading" : undefined} className="space-y-5">
+      {showHeading ? (
+        <div className="space-y-2 px-1">
+          <h2 id="profile-trip-grid-heading" className="text-xs font-semibold uppercase tracking-[0.33em] text-primary">
+            {title}
+          </h2>
+          <p className="text-sm leading-relaxed text-neutral-600">{subtitle}</p>
+        </div>
+      ) : null}
 
       <ul className="grid grid-cols-3 gap-[6px] sm:gap-3">
         {posts.map((post) => (
@@ -51,7 +56,7 @@ export function ProfilePostGrid({
                   tript log
                 </span>
                 <p id={`trail-${post.id}`} className="text-[14px] font-semibold leading-snug">{post.title}</p>
-                <p className="text-[12px] text-white/82">{post.subtitle}</p>
+                <p className="text-[12px] text-white/82">{post.locationDisplay}</p>
               </div>
               <span aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl border border-white/15" />
             </Link>

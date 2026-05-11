@@ -109,6 +109,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      post_media: {
+        Row: {
+          id: string;
+          post_id: string;
+          media_url: string;
+          alt_text: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          media_url: string;
+          alt_text?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          media_url?: string;
+          alt_text?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       likes: {
         Row: {
           user_id: string;

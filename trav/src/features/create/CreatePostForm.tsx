@@ -125,7 +125,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     <form className="space-y-6 px-3 pb-10 pt-4 sm:px-4" onSubmit={handleSubmit} noValidate>
       <PageHeader
         title="Compose travel log"
-        subtitle="Core recap fields publish to Supabase; restaurants, hashtags, outbound links, and staged media previews stay local until those tables ship."
+        subtitle="Core recap fields publish to Supabase; restaurants, hashtags, and links stay local. Hero photos: Storage + post_media — see supabase/STORAGE_SETUP.md and attachPrimaryPostImageFromFile after publish."
       />
 
       {publishError ? (
@@ -198,6 +198,10 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         </fieldset>
       </Card>
 
+      {/*
+        Storage pipeline is ready (`attachPrimaryPostImageFromFile` in @/features/media).
+        Next step: keep a `File | null` for the hero shot, call the helper after `publishTripPost` resolves, then navigate.
+      */}
       <MediaUploadPlaceholder
         disabled={interactionLocked}
         items={stagedMediaLabels}
@@ -236,8 +240,8 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         <div className="space-y-2 text-sm text-neutral-600">
           <p className="font-semibold text-neutral-950">Publishing lands in Postgres.</p>
           <p className="text-pretty">
-            Trip title, location line, teaser, journal, and waypoints persist to Supabase. Media bench items above still live in this tab only —
-            Storage wiring comes next sprint.
+            Trip title, location line, teaser, journal, and waypoints persist to Supabase. The media strip above is still a local preview — wire
+            `attachPrimaryPostImageFromFile` when you hook the real file picker (bucket + policies: `supabase/STORAGE_SETUP.md`).
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

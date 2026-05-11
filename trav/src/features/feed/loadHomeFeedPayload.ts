@@ -3,6 +3,7 @@ import type { TravelFeedPost } from "@/types";
 import { mockTravelPosts } from "@/features/feed/mockTravelPosts";
 import { hydrateFeedEngagement } from "@/features/engagement/hydrateFeedEngagement";
 import type { Database } from "@/lib/supabase/types";
+import { pickPrimaryMediaByPostId } from "@/lib/media/pickPrimaryMediaUrlByPost";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
 import { initialsFromProfile } from "@/lib/userDisplay";
 import { createClient } from "@/lib/supabase/server";
@@ -43,6 +44,7 @@ function rowToTravelFeedPost(
   author: ProfileRow,
   orderedPlaceNames: string[],
   engagement: { likeCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean },
+  cardImage?: { url: string; alt: string },
 ): TravelFeedPost {
   const placesPreview =
     orderedPlaceNames.length > 0 ? orderedPlaceNames.slice(0, PLACES_PREVIEW_LIMIT) : undefined;
@@ -55,8 +57,8 @@ function rowToTravelFeedPost(
     userInitials: initialsFromProfile(author.username, author.display_name ?? null),
     avatarUrl: author.avatar_url?.trim() || undefined,
     locationDisplay,
-    imageUrl: SUPABASE_TRAVEL_CARD_IMAGE_URL,
-    imageAlt: SUPABASE_TRAVEL_CARD_IMAGE_ALT,
+    imageUrl: cardImage?.url ?? SUPABASE_TRAVEL_CARD_IMAGE_URL,
+    imageAlt: cardImage?.alt ?? SUPABASE_TRAVEL_CARD_IMAGE_ALT,
     title: post.title,
     description: post.description?.trim() ?? "",
     likesCount: engagement.likeCount,
@@ -132,10 +134,27 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     return { data, error };
   }
 
-  const [profilesResponse, locationsResponse, engagementBundle] = await Promise.all([
+  async function fetchPrimaryPostMedia(): Promise<{
+    data: { post_id: string; media_url: string; sort_order: number; alt_text: string | null }[] | null;
+    error: unknown | null;
+  }> {
+    if (!postIds.length) {
+      return { data: [], error: null };
+    }
+
+    const { data, error } = await supabase
+      .from("post_media")
+      .select("post_id, media_url, sort_order, alt_text")
+      .in("post_id", postIds);
+
+    return { data, error };
+  }
+
+  const [profilesResponse, locationsResponse, engagementBundle, mediaResponse] = await Promise.all([
     supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", authorIds),
     fetchOrderedLocations(),
     hydrateFeedEngagement(supabase, postIds, viewerId),
+    fetchPrimaryPostMedia(),
   ]);
 
   if (profilesResponse.error) {
@@ -159,7 +178,16 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     };
   }
 
+  if (mediaResponse.error) {
+    return {
+      type: "error",
+      message: friendlyFetchError(mediaResponse.error),
+    };
+  }
+
   const { likeCounts, viewerLiked, viewerSaved } = engagementBundle.snapshot;
+
+  const primaryImageByPost = pickPrimaryMediaByPostId(mediaResponse.data ?? [], SUPABASE_TRAVEL_CARD_IMAGE_ALT);
 
   const profilesById: Record<string, ProfileRow> = {};
   for (const profile of profilesResponse.data ?? []) {
@@ -177,12 +205,13 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
       continue;
     }
     const stops = locationBuckets[post.id] ?? [];
+    const cardImage = primaryImageByPost.get(post.id);
     feedPosts.push(
       rowToTravelFeedPost(post, author, stops, {
         likeCount: likeCounts[post.id] ?? 0,
         viewerHasLiked: viewerLiked.has(post.id),
         viewerHasSaved: viewerSaved.has(post.id),
-      }),
+      }, cardImage),
     );
   }
 

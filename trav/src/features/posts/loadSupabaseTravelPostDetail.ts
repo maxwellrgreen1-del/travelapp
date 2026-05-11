@@ -69,15 +69,29 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
 
   const commentsPromise = loadCommentsForPost(supabase, requestedId);
 
-  const [likesHead, viewerLikeRes, viewerSaveRes, commentsPack] = await Promise.all([
+  const primaryMediaPromise = supabase
+    .from("post_media")
+    .select("media_url, alt_text, sort_order")
+    .eq("post_id", requestedId)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const [likesHead, viewerLikeRes, viewerSaveRes, commentsPack, primaryMediaRes] = await Promise.all([
     totalLikesPromise,
     viewerLikePromise,
     viewerSavePromise,
     commentsPromise,
+    primaryMediaPromise,
   ]);
 
   const likesCount =
     likesHead.error || typeof likesHead.count !== "number" ? 0 : likesHead.count;
+
+  const heroUrl =
+    primaryMediaRes.error || !primaryMediaRes.data ? undefined : primaryMediaRes.data.media_url?.trim() || undefined;
+  const heroAlt =
+    primaryMediaRes.error || !primaryMediaRes.data ? undefined : primaryMediaRes.data.alt_text?.trim() || undefined;
 
   return {
     id: post.id,
@@ -85,8 +99,8 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     userInitials: initialsFromProfile(author.username, author.display_name ?? null),
     avatarUrl: author.avatar_url?.trim() || undefined,
     locationDisplay: locationLine,
-    imageUrl: SUPABASE_TRAVEL_CARD_IMAGE_URL,
-    imageAlt: SUPABASE_TRAVEL_CARD_IMAGE_ALT,
+    imageUrl: heroUrl || SUPABASE_TRAVEL_CARD_IMAGE_URL,
+    imageAlt: heroAlt || SUPABASE_TRAVEL_CARD_IMAGE_ALT,
     title: post.title,
     description: post.description ?? "",
     likesCount,

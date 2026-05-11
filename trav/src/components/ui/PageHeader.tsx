@@ -29,7 +29,7 @@ export function PageHeader({
   const showBack = showBackNavigation && Boolean(backHref);
 
   return (
-    <header className={cx("space-y-4", className)}>
+    <header className={cx("min-w-0 w-full space-y-4", className)}>
       {showBack && backHref ? (
         <div className="-ml-2">
           <Link
@@ -42,12 +42,12 @@ export function PageHeader({
         </div>
       ) : null}
 
-      <div className="flex items-start gap-4">
+      <div className="flex min-w-0 w-full items-start gap-3 sm:gap-4">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="text-balance text-2xl font-semibold leading-tight tracking-tight text-neutral-900 [&_*]:tracking-tight">
             {title}
           </div>
-          {subtitle ? <div className="text-sm leading-6 text-neutral-600">{subtitle}</div> : null}
+          {subtitle ? <div className="break-words text-sm leading-6 text-neutral-600">{subtitle}</div> : null}
         </div>
         {trailing ? <div className="shrink-0 pt-1">{trailing}</div> : null}
       </div>

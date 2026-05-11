@@ -4,7 +4,8 @@ export type SavedDestinationCategoryId =
   | "alpine-wire"
   | "urban-taste"
   | "spirit-trail"
-  | "rail-sway";
+  | "rail-sway"
+  | "from-feed";
 
 export type SavedDestinationPin = {
   id: string;
@@ -19,6 +20,8 @@ export type SavedDestinationPin = {
   categoryId: SavedDestinationCategoryId;
   /** Deep link to an existing recap when we have one; explore-only pins use null */
   relatedPostId: string | null;
+  /** `recap` = bookmarked Supabase posts; seeded explore pins omit this */
+  cardKind?: "explore" | "recap";
 };
 
 export const savedDestinationCategoryOptions: ReadonlyArray<{
@@ -30,6 +33,7 @@ export const savedDestinationCategoryOptions: ReadonlyArray<{
   { id: "urban-taste", label: "Night cities & bites" },
   { id: "spirit-trail", label: "Temples & culture" },
   { id: "rail-sway", label: "Trains & map lines" },
+  { id: "from-feed", label: "Trip recaps" },
 ];
 
 /**

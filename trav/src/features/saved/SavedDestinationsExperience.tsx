@@ -3,23 +3,28 @@
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
-import type { SavedDestinationCategoryId } from "@/features/saved/mockSavedDestinations";
-import { mockSavedDestinationPins, savedDestinationCategoryOptions } from "@/features/saved/mockSavedDestinations";
+import type { SavedDestinationCategoryId, SavedDestinationPin } from "@/features/saved/mockSavedDestinations";
+import { savedDestinationCategoryOptions } from "@/features/saved/mockSavedDestinations";
 import { SavedDestinationFilters } from "@/features/saved/components/SavedDestinationFilters";
 import { SavedDestinationList } from "@/features/saved/components/SavedDestinationList";
 import { blobMatchesExploreQuery } from "@/features/search/filterUtils";
 import { cx } from "@/lib/utils";
 
+type SavedDestinationsExperienceProps = {
+  /** Pins from Supabase saves — empty triggers the serene empty aisle with guidance toward the ribbon control. */
+  initialPins: SavedDestinationPin[];
+};
+
 /**
- * Saved tab client shell — vibes + lexical filters over the mock wish compass.
+ * Filters + tally row — swaps between an empty onboarding state and Postgres-backed recap cards seamlessly.
  */
-export function SavedDestinationsExperience() {
-  const totalCount = mockSavedDestinationPins.length;
+export function SavedDestinationsExperience({ initialPins }: SavedDestinationsExperienceProps) {
+  const totalCount = initialPins.length;
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<SavedDestinationCategoryId | null>(null);
 
   const matchedPins = useMemo(() => {
-    return mockSavedDestinationPins.filter((pin) => {
+    return initialPins.filter((pin) => {
       if (categoryId && pin.categoryId !== categoryId) {
         return false;
       }
@@ -35,9 +40,10 @@ export function SavedDestinationsExperience() {
         categoryLabel,
       ]);
     });
-  }, [categoryId, query]);
+  }, [initialPins, categoryId, query]);
 
   const filtersActive = query.trim().length > 0 || categoryId !== null;
+  const hasRecaps = initialPins.some((pin) => pin.cardKind === "recap");
 
   return (
     <main className="space-y-7 pb-28 pt-2 sm:pt-5">
@@ -46,7 +52,9 @@ export function SavedDestinationsExperience() {
         title="Saved destinations"
         subtitle={
           <span className="text-neutral-600">
-            A living moodboard — every pin remembers why your thumb hovered before you booked anything.
+            {hasRecaps
+              ? "These trail logs stay tied to Supabase bookmarks — ribbons you tap on the feed snap straight into this shelf."
+              : "When a recap or explore tile stops your thumb, tuck it here — tides, ridges, ramen glow."}
           </span>
         }
         trailing={
@@ -69,15 +77,19 @@ export function SavedDestinationsExperience() {
         <p className="text-sm font-semibold text-neutral-800">
           {filtersActive ? (
             <>
-              Showing <span className="text-primary">{matchedPins.length}</span>{" "}
-              <span aria-hidden>/</span> <span>{totalCount}</span> escapes
+              Showing <span className="text-primary">{matchedPins.length}</span> <span aria-hidden>/</span>{" "}
+              <span>{totalCount}</span> escapes
             </>
           ) : (
-            <>Showing all {matchedPins.length} escapes</>
+            <>
+              Showing all {matchedPins.length} {hasRecaps ? "saved recaps" : "escapes"}
+            </>
           )}
         </p>
         {!filtersActive ? (
-          <p className="text-xs font-medium italic text-neutral-500">Swipe cards open recaps or widen in Explore.</p>
+          <p className="text-xs font-medium italic text-neutral-500 sm:self-auto">
+            {hasRecaps ? "Open a card to revisit the full journal — bookmarks stay sorted by newest save." : "Swipe cards open recaps or widen in Explore."}
+          </p>
         ) : null}
       </div>
 
@@ -88,6 +100,13 @@ export function SavedDestinationsExperience() {
           setQuery("");
           setCategoryId(null);
         }}
+        emptyExtra={
+          totalCount === 0 ? (
+            <p className="text-pretty leading-relaxed">
+              Tap the ribbon on any recap in the feed or on a trip detail header — saves land here instantly via the same Supabase stash.
+            </p>
+          ) : undefined
+        }
       />
     </main>
   );

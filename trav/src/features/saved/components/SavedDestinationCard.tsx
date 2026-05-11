@@ -53,7 +53,7 @@ export function SavedDestinationCard({ destination, className }: SavedDestinatio
 
           <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.32em] text-white">
             <span className="rounded-full bg-primary/92 px-[12px] py-[6px] text-[10px] font-bold tracking-[0.2em] text-white shadow-[0_6px_18px_-4px_rgba(0,0,0,0.45)]">
-              Wish compass
+              {destination.cardKind === "recap" ? "Trail recap" : "Wish compass"}
             </span>
             <span className="rounded-full bg-black/52 px-[12px] py-[6px] text-[10px] font-semibold uppercase tracking-[0.28em] text-white backdrop-blur-sm">
               {vibeLabel}
@@ -71,14 +71,16 @@ export function SavedDestinationCard({ destination, className }: SavedDestinatio
                 <p className="text-sm font-medium text-neutral-600">{destination.countryRegion}</p>
               </div>
               <span className="shrink-0 rounded-2xl border border-primary/30 bg-primary/10 px-[12px] py-2 text-right text-[11px] font-semibold text-primary shadow-inner shadow-white/95">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.34em] text-primary/95">Pinned</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.34em] text-primary/95">
+                  {destination.cardKind === "recap" ? "Saved" : "Pinned"}
+                </span>
                 <span className="tabular-nums text-neutral-950">{formatSavedBookmarkDate(destination.savedAtISO)}</span>
               </span>
             </div>
 
             <div className="rounded-[22px] border border-neutral-200/90 bg-neutral-950/[0.02] p-[18px] shadow-inner shadow-white/92">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/90">Why I saved this</p>
-              <p className="mt-2 text-[15px] leading-relaxed text-neutral-800">{destination.whySaved}</p>
+              <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-neutral-800">{destination.whySaved}</p>
             </div>
 
             <div className="flex flex-wrap gap-[7px]" aria-label="Related tags">
@@ -101,7 +103,7 @@ export function SavedDestinationCard({ destination, className }: SavedDestinatio
                   className: "inline-flex shrink-0",
                 })}
               >
-                View related recap
+                {destination.cardKind === "recap" ? "Open saved recap" : "View related recap"}
               </Link>
             ) : (
               <p className="self-center px-2 text-[13px] font-medium italic text-neutral-500 sm:self-auto">

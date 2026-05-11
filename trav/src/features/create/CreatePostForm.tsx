@@ -13,13 +13,16 @@ import { Textarea } from "@/components/ui/Textarea";
 import {
   LinkListInputPlaceholder,
   type CreatorLinkDraft,
-  MediaUploadPlaceholder,
   PlacesVisitedInputPlaceholder,
+  PrimaryHeroImagePicker,
   TagInputPlaceholder,
 } from "@/features/create/components";
+import { stashPostMediaUploadWarning } from "@/features/create/postPublishMediaWarningSession";
 import { publishTripPost } from "@/features/create/publishTripPost";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
+import { attachPrimaryPostImageFromFile } from "@/features/media";
 import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
+import { validateImageFile } from "@/lib/media/validateImageFile";
 import { cx } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,7 +34,7 @@ function summarizePlaces(rows: string[]) {
   return rows.map((row) => row.trim()).filter(Boolean);
 }
 
-/** Authenticated composer — core fields persist to Supabase while media uploads stay mocked locally for now. */
+/** Authenticated composer — core fields + optional hero image persist to Supabase. */
 export function CreatePostForm({ user }: CreatePostFormProps) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -44,10 +47,13 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
   const [placesVisited, setPlacesVisited] = useState<string[]>([""]);
   const [destinationTags, setDestinationTags] = useState<string[]>([]);
   const [externalLinks, setExternalLinks] = useState<CreatorLinkDraft[]>([]);
-  const [stagedMediaLabels, setStagedMediaLabels] = useState<string[]>([]);
+
+  const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [heroPickError, setHeroPickError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<CreatePostCoreErrors>({});
   const [publishing, setPublishing] = useState(false);
+  const [publishBusyLabel, setPublishBusyLabel] = useState<"Saving trip…" | "Uploading cover…">("Saving trip…");
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const interactionLocked = publishing;
@@ -69,9 +75,11 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     setPlacesVisited([""]);
     setDestinationTags([]);
     setExternalLinks([]);
-    setStagedMediaLabels([]);
+    setHeroFile(null);
+    setHeroPickError(null);
     setErrors({});
     setPublishing(false);
+    setPublishBusyLabel("Saving trip…");
     setPublishError(null);
   }
 
@@ -83,7 +91,16 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       return;
     }
 
+    if (heroFile) {
+      const heroCheck = validateImageFile(heroFile);
+      if (!heroCheck.ok) {
+        setHeroPickError(heroCheck.message);
+        return;
+      }
+    }
+
     setPublishing(true);
+    setPublishBusyLabel("Saving trip…");
     setPublishError(null);
 
     const bootstrap = await loadOrCreateProfileForUser(supabase, user);
@@ -105,13 +122,28 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       placeNames,
     });
 
-    setPublishing(false);
-
     if (!result.ok) {
+      setPublishing(false);
       setPublishError(result.message);
       return;
     }
 
+    if (heroFile) {
+      setPublishBusyLabel("Uploading cover…");
+      const imageResult = await attachPrimaryPostImageFromFile(supabase, {
+        postId: result.postId,
+        authorId: user.id,
+        file: heroFile,
+        altText: tripTitle.trim(),
+      });
+
+      if (!imageResult.ok) {
+        stashPostMediaUploadWarning(result.postId, imageResult.message);
+      }
+    }
+
+    setPublishing(false);
+    setPublishBusyLabel("Saving trip…");
     router.refresh();
     router.push(`/post/${result.postId}`);
   }
@@ -125,7 +157,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     <form className="space-y-6 px-3 pb-10 pt-4 sm:px-4" onSubmit={handleSubmit} noValidate>
       <PageHeader
         title="Compose travel log"
-        subtitle="Core recap fields publish to Supabase; restaurants, hashtags, and links stay local. Hero photos: Storage + post_media — see supabase/STORAGE_SETUP.md and attachPrimaryPostImageFromFile after publish."
+        subtitle="Core recap fields and an optional cover photo publish to Supabase — waypoints sync; restaurants, tags, and links stay local for now."
       />
 
       {publishError ? (
@@ -198,14 +230,12 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         </fieldset>
       </Card>
 
-      {/*
-        Storage pipeline is ready (`attachPrimaryPostImageFromFile` in @/features/media).
-        Next step: keep a `File | null` for the hero shot, call the helper after `publishTripPost` resolves, then navigate.
-      */}
-      <MediaUploadPlaceholder
+      <PrimaryHeroImagePicker
         disabled={interactionLocked}
-        items={stagedMediaLabels}
-        onItemsChange={setStagedMediaLabels}
+        file={heroFile}
+        onFileChange={setHeroFile}
+        validationError={heroPickError}
+        onValidationError={setHeroPickError}
       />
 
       <Card padding="lg" className="space-y-6 bg-white shadow-md shadow-neutral-950/10">
@@ -240,8 +270,8 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         <div className="space-y-2 text-sm text-neutral-600">
           <p className="font-semibold text-neutral-950">Publishing lands in Postgres.</p>
           <p className="text-pretty">
-            Trip title, location line, teaser, journal, and waypoints persist to Supabase. The media strip above is still a local preview — wire
-            `attachPrimaryPostImageFromFile` when you hook the real file picker (bucket + policies: `supabase/STORAGE_SETUP.md`).
+            Trip title, location line, teaser, journal, waypoints, and optional cover photo sync to Supabase. If the image step fails after the post
+            saves, you will still land on your recap with a heads-up banner.
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -264,7 +294,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
                     "motion-safe:animate-spin",
                   )}
                 />
-                Publishing…
+                {publishBusyLabel}
               </span>
             ) : (
               "Publish travel log"

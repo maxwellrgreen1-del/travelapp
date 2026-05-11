@@ -7,6 +7,7 @@ import type { TravelPostDetail } from "@/types";
 
 import { PostDetailContent } from "@/features/posts/components/PostDetailContent";
 import { PostDetailHero } from "@/features/posts/components/PostDetailHero";
+import { PostPublishMediaWarningBanner } from "@/features/posts/components/PostPublishMediaWarningBanner";
 
 type PostDetailScreenProps = {
   requestedId: string;
@@ -56,6 +57,10 @@ export function PostDetailScreen({ requestedId, detail }: PostDetailScreenProps)
           title: detail.title,
         }}
       />
+
+      <div className="relative z-20 px-5">
+        <PostPublishMediaWarningBanner postId={detail.id} />
+      </div>
 
       <PostDetailContent key={detail.id} detail={detail} />
     </article>

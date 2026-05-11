@@ -3,19 +3,17 @@ import Link from "next/link";
 import { buttonClassName } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-import type { Id } from "@/types";
+import type { TravelPostDetail } from "@/types";
 
 import { PostDetailContent } from "@/features/posts/components/PostDetailContent";
 import { PostDetailHero } from "@/features/posts/components/PostDetailHero";
-import { resolveTravelPostDetail } from "@/features/posts/travelPostDetailModel";
 
 type PostDetailScreenProps = {
-  id: Id;
+  requestedId: string;
+  detail: TravelPostDetail | null;
 };
 
-export function PostDetailScreen({ id }: PostDetailScreenProps) {
-  const detail = resolveTravelPostDetail(id);
-
+export function PostDetailScreen({ requestedId, detail }: PostDetailScreenProps) {
   if (!detail) {
     return (
       <div className="flex min-h-[100vh] flex-col bg-gradient-to-b from-[#f7fdfa] via-white to-[#eaf4ea] px-5 pb-[120px] pt-14">
@@ -30,16 +28,17 @@ export function PostDetailScreen({ id }: PostDetailScreenProps) {
         </div>
 
         <EmptyState
-          title="This travel tale is still unpacking"
+          title="This travel tale isn’t reachable yet"
           description={
             <>
-              No mock bundle matches <span className="font-semibold text-neutral-900">{id}</span> yet — try opening a tript feed recap
-              or masonry tile from Explore.
+              Nothing in the seeded library or Supabase surfaced for{" "}
+              <span className="font-semibold text-neutral-900">{requestedId}</span> — try another recap or compose a fresh log from{" "}
+              <span className="font-semibold text-neutral-900">Create</span>.
             </>
           }
           action={
-            <Link href="/search" prefetch={false} className={buttonClassName({ variant: "primary", size: "md", className: "px-10" })}>
-              Peek Explore grid
+            <Link href="/create" prefetch={false} className={buttonClassName({ variant: "primary", size: "md", className: "px-10" })}>
+              Open composer
             </Link>
           }
         />

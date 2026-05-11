@@ -46,6 +46,69 @@ export type Database = {
         };
         Relationships: [];
       };
+      posts: {
+        Row: {
+          id: string;
+          author_id: string;
+          title: string;
+          description: string | null;
+          journal: string | null;
+          visibility: string;
+          location_display: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          title: string;
+          description?: string | null;
+          journal?: string | null;
+          visibility?: string;
+          location_display?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          title?: string;
+          description?: string | null;
+          journal?: string | null;
+          visibility?: string;
+          location_display?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      post_locations: {
+        Row: {
+          id: string;
+          post_id: string;
+          name: string;
+          note: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          name: string;
+          note?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          name?: string;
+          note?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

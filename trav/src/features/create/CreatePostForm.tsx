@@ -1,7 +1,9 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -15,39 +17,24 @@ import {
   PlacesVisitedInputPlaceholder,
   TagInputPlaceholder,
 } from "@/features/create/components";
+import { publishTripPost } from "@/features/create/publishTripPost";
+import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
+import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
 import { cx } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
-const PUBLISH_MS = 1200;
-
-type FormErrors = Partial<Record<"tripTitle" | "destination" | "shortDescription", string>>;
-
-function validateFields(tripTitle: string, destination: string, shortDescription: string): FormErrors {
-  const next: FormErrors = {};
-
-  if (!tripTitle.trim()) {
-    next.tripTitle = "Give this trip log a catchy title explorers can skim.";
-  }
-
-  if (!destination.trim()) {
-    next.destination = "Add where you wandered — regions, landmarks, whichever feels right.";
-  }
-
-  if (!shortDescription.trim()) {
-    next.shortDescription = "A short teaser hooks friends before they scroll your journal.";
-  } else if (shortDescription.trim().length < 20) {
-    next.shortDescription = "Stretch your teaser — at least twenty characters paints a sharper hook.";
-  }
-
-  return next;
-}
+type CreatePostFormProps = {
+  user: User;
+};
 
 function summarizePlaces(rows: string[]) {
   return rows.map((row) => row.trim()).filter(Boolean);
 }
 
-/** Client-only drafts until uploads + persistence ship. */
-export function CreatePostForm() {
-  const successRef = useRef<HTMLDivElement>(null);
+/** Authenticated composer — core fields persist to Supabase while media uploads stay mocked locally for now. */
+export function CreatePostForm({ user }: CreatePostFormProps) {
+  const router = useRouter();
+  const [supabase] = useState(() => createClient());
 
   const [tripTitle, setTripTitle] = useState("");
   const [destination, setDestination] = useState("");
@@ -59,17 +46,19 @@ export function CreatePostForm() {
   const [externalLinks, setExternalLinks] = useState<CreatorLinkDraft[]>([]);
   const [stagedMediaLabels, setStagedMediaLabels] = useState<string[]>([]);
 
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<CreatePostCoreErrors>({});
   const [publishing, setPublishing] = useState(false);
-  const [published, setPublished] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
-  const interactionLocked = publishing || published;
+  const interactionLocked = publishing;
 
   useEffect(() => {
-    if (published && successRef.current) {
-      successRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!publishError) {
+      return;
     }
-  }, [published]);
+    const handle = window.setTimeout(() => setPublishError(null), 9000);
+    return () => window.clearTimeout(handle);
+  }, [publishError]);
 
   function resetComposer() {
     setTripTitle("");
@@ -83,95 +72,71 @@ export function CreatePostForm() {
     setStagedMediaLabels([]);
     setErrors({});
     setPublishing(false);
-    setPublished(false);
+    setPublishError(null);
   }
 
-  async function fakePublishTripLog() {
-    const validated = validateFields(tripTitle, destination, shortDescription);
+  async function persistTripLog() {
+    const validated = validateCreatePostCoreFields(tripTitle, destination, shortDescription);
     setErrors(validated);
 
     if (Object.keys(validated).length > 0) {
-      setPublished(false);
       return;
     }
 
     setPublishing(true);
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, PUBLISH_MS);
+    setPublishError(null);
+
+    const bootstrap = await loadOrCreateProfileForUser(supabase, user);
+    if (!bootstrap.ok) {
+      setPublishing(false);
+      setPublishError(bootstrap.error);
+      return;
+    }
+
+    const placeNames = summarizePlaces(placesVisited);
+
+    const result = await publishTripPost(supabase, {
+      authorId: user.id,
+      title: tripTitle.trim(),
+      locationDisplay: destination.trim(),
+      description: shortDescription.trim(),
+      journal: journalBody,
+      visibility: "public",
+      placeNames,
     });
+
     setPublishing(false);
-    setPublished(true);
+
+    if (!result.ok) {
+      setPublishError(result.message);
+      return;
+    }
+
+    router.refresh();
+    router.push(`/post/${result.postId}`);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void fakePublishTripLog();
-  }
-
-  if (published) {
-    const placeSummary = summarizePlaces(placesVisited);
-
-    return (
-      <section className="space-y-5 px-3 pb-10 pt-6 sm:px-4">
-        <PageHeader title="Dreamy — your log is mocked in" subtitle="Everything stayed on-device — Supabase uploads come next sprint." />
-
-        <div ref={successRef} role="status" aria-live="polite" tabIndex={-1}>
-          <Card tone="muted" padding="lg" className="border-emerald-200/80 shadow-lg shadow-emerald-900/5">
-            <div className="flex flex-wrap items-start gap-4">
-              <div className="flex size-14 items-center justify-center rounded-[18px] bg-primary shadow-md shadow-primary/40">
-                <CheckBadgeIcon aria-hidden className="text-white" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary/85">Practice publish</p>
-                <p className="text-3xl font-semibold tracking-tight text-neutral-900">{tripTitle.trim()}</p>
-                <p className="text-sm text-neutral-600">
-                  Tagged{" "}
-                  <span className="font-semibold text-neutral-900">{destination.trim()}</span>
-                  {' — '}kept locally for QA only.
-                </p>
-              </div>
-            </div>
-
-            <dl className="mt-6 divide-y divide-emerald-100 text-sm leading-relaxed text-neutral-700">
-              <DetailRow term="Elevator pitch" definition={shortDescription.trim()} />
-              <DetailRow term="Journal vibes" definition={journalBody.trim() ? journalBody.trim() : "No long-form entry drafted yet."} />
-              <DetailRow
-                term="Restaurants shouted out"
-                definition={restaurants.trim() ? restaurants.trim() : "No tasting notes scribbled yet."}
-              />
-              <DetailRow
-                term="Waypoints staged"
-                definition={placeSummary.length ? placeSummary.join(" → ") : "No extra stops enumerated."}
-              />
-              <DetailRow
-                term="Media bench"
-                definition={
-                  stagedMediaLabels.length
-                    ? stagedMediaLabels.join(", ")
-                    : "No reels or telephoto frames queued locally."
-                }
-              />
-              <DetailRow term="Outbound links" definition={summarizeLinks(externalLinks)} />
-              <DetailRow term="Hashtags" definition={destinationTags.length ? destinationTags.join(" ") : "No tags yet."} />
-            </dl>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button variant="primary" fullWidth size="lg" type="button" onClick={resetComposer}>
-                Draft another trip
-              </Button>
-              <Button variant="outlinePrimary" fullWidth size="lg" type="button" disabled>
-                Go live (wired later)
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </section>
-    );
+    void persistTripLog();
   }
 
   return (
     <form className="space-y-6 px-3 pb-10 pt-4 sm:px-4" onSubmit={handleSubmit} noValidate>
-      <PageHeader title="Compose travel log" subtitle="Dream up your recap — validations run locally until Supabase syncs drafts." />
+      <PageHeader
+        title="Compose travel log"
+        subtitle="Core recap fields publish to Supabase; restaurants, hashtags, outbound links, and staged media previews stay local until those tables ship."
+      />
+
+      {publishError ? (
+        <output
+          aria-live="assertive"
+          role="alert"
+          className="block rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-relaxed text-red-900 shadow-sm shadow-red-900/10"
+        >
+          {publishError}
+        </output>
+      ) : null}
 
       <Card padding="lg" tone="muted" className="bg-white shadow-md shadow-neutral-950/15">
         <fieldset disabled={interactionLocked} className="space-y-6">
@@ -197,7 +162,7 @@ export function CreatePostForm() {
             autoComplete="off"
             label="Destination / location focus"
             placeholder="Southern Patagonian Ice Field, Chile..."
-            hint="Countries, valleys, waterways — specificity helps explorers picture the arc."
+            hint="Countries, valleys, waterways — specificity helps explorers picture the arc. Saved to `posts.location_display`."
             value={destination}
             error={errors.destination}
             onChange={(event) => {
@@ -209,7 +174,7 @@ export function CreatePostForm() {
           <Textarea
             required
             label="Short description"
-            hint="Teaser travellers see atop the recap — keep it evocative but quick to read."
+            hint="Teaser travellers skim first — synced to Supabase `description`."
             placeholder="Northern lights chased by geothermal bread bakes..."
             rows={5}
             value={shortDescription}
@@ -224,7 +189,7 @@ export function CreatePostForm() {
 
           <Textarea
             label="Blog-style journal entry"
-            hint="Long-form riff: smells, pacing, playlists, regrets — everything future readers skim."
+            hint="Stored in `journal` — long-form riff: smells, playlists, regrets."
             placeholder="Day three — gale switched west, pastries turned gritty with ash..."
             rows={10}
             value={journalBody}
@@ -242,7 +207,7 @@ export function CreatePostForm() {
       <Card padding="lg" className="space-y-6 bg-white shadow-md shadow-neutral-950/10">
         <Textarea
           label="Restaurant recommendations"
-          hint="List haunts comma-separated or write mini blurbs."
+          hint="Comma-separated gems — mocked locally for now until a dedicated restaurants column arrives."
           placeholder="Chacra breakfast bar · miso latte flight · secret omakase counter downstairs..."
           rows={6}
           value={restaurants}
@@ -269,9 +234,10 @@ export function CreatePostForm() {
 
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+1rem)] rounded-[26px] border border-neutral-200 bg-white/95 p-5 shadow-xl shadow-neutral-950/25 backdrop-blur">
         <div className="space-y-2 text-sm text-neutral-600">
-          <p className="font-semibold text-neutral-950">Publishing is mock-only.</p>
+          <p className="font-semibold text-neutral-950">Publishing lands in Postgres.</p>
           <p className="text-pretty">
-            Tap <span className="font-semibold text-primary">Publish travel log</span> for the tactile flow — nothing uploads yet.
+            Trip title, location line, teaser, journal, and waypoints persist to Supabase. Media bench items above still live in this tab only —
+            Storage wiring comes next sprint.
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -306,40 +272,4 @@ export function CreatePostForm() {
       <div aria-hidden className="h-4" />
     </form>
   );
-}
-
-function CheckBadgeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <path d="m7 13 4 4 10-11" stroke="currentColor" strokeWidth="2.35" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function DetailRow({ term, definition }: { term: string; definition: string }) {
-  return (
-    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-10">
-      <dt className="basis-40 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-400">{term}</dt>
-      <dd className="flex-1 text-base text-neutral-800">{definition}</dd>
-    </div>
-  );
-}
-
-function summarizeLinks(rows: CreatorLinkDraft[]) {
-  if (!rows.length) {
-    return "No outbound hops yet.";
-  }
-
-  const parts = rows
-    .filter((link) => link.url.trim() || link.label.trim())
-    .map((link) => {
-      const label = link.label.trim() || link.url.trim() || "Untitled";
-      const href = link.url.trim();
-      if (!href) {
-        return label;
-      }
-      return `${label} → ${href}`;
-    });
-
-  return parts.length ? parts.join(" · ") : "Link rows drafted but URLs still empty.";
 }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { tryInsertLikeNotification } from "@/features/notifications/notificationInserts";
 import type { Database } from "@/lib/supabase/types";
 
 type Client = SupabaseClient<Database>;
@@ -18,6 +19,7 @@ export async function likePost(supabase: Client, userId: string, postId: string)
   if (error) {
     return { ok: false, message: tidyError(error) };
   }
+  void tryInsertLikeNotification(supabase, userId, postId);
   return { ok: true };
 }
 

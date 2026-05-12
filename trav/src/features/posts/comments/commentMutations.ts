@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { tryInsertCommentNotification } from "@/features/notifications/notificationInserts";
 import type { Database } from "@/lib/supabase/types";
 
 type Client = SupabaseClient<Database>;
@@ -36,6 +37,12 @@ export async function insertPostComment(
   if (error || !data) {
     return { ok: false, message: tidyMessage(error) };
   }
+
+  void tryInsertCommentNotification(supabase, {
+    actorId: fields.authorId,
+    postId: fields.postId,
+    commentId: data.id,
+  });
 
   return { ok: true, row: data };
 }

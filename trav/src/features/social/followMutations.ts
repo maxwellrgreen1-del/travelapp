@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { tryInsertFollowNotification } from "@/features/notifications/notificationInserts";
 import type { Database } from "@/lib/supabase/types";
 
 type Client = SupabaseClient<Database>;
@@ -31,6 +32,8 @@ export async function insertFollowEdge(
     }
     return { ok: false, message: tidyMessage(error) };
   }
+
+  void tryInsertFollowNotification(client, fields.followerId, fields.followingId);
 
   return { ok: true };
 }

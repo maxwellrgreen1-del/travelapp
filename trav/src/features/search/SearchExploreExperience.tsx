@@ -248,7 +248,10 @@ export function SearchExploreExperience() {
               <ul className="flex snap-x gap-6 overflow-x-auto pb-[10px] pl-10 pr-12" role="list">
                 {liveProfiles.map((traveler) => (
                   <li key={traveler.id} className="snap-start">
-                    <SuggestedTravelerCard traveler={traveler} />
+                    <SuggestedTravelerCard
+                      traveler={traveler}
+                      profileHref={`/profile?visit=${encodeURIComponent(traveler.id)}`}
+                    />
                   </li>
                 ))}
               </ul>

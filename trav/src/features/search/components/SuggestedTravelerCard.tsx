@@ -19,11 +19,13 @@ const categoryTone: Partial<Record<ExploreCategoryId, "primary" | "outline" | "n
 
 type SuggestedTravelerCardProps = {
   traveler: SuggestedExplorer;
+  /** Defaults to `/profile` — pass `/profile?visit=<uuid>` to open another explorer. */
+  profileHref?: string;
 };
 
 /** Compact roster row that hints at traveller POV arcs + social proof. */
-export function SuggestedTravelerCard({ traveler }: SuggestedTravelerCardProps) {
-  const profilePeek = `/profile` as const;
+export function SuggestedTravelerCard({ traveler, profileHref = "/profile" }: SuggestedTravelerCardProps) {
+  const profilePeek = profileHref;
 
   return (
     <Card tone="muted" padding="lg" className={cx("w-[280px] shrink-0 rounded-[26px] border-neutral-200/95 bg-white/98 shadow-xl shadow-neutral-950/25")}>

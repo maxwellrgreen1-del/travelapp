@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -9,6 +10,9 @@ import { cx } from "@/lib/utils";
 
 type ProfileHeaderProps = {
   traveler: MockTravelerSocialProfile;
+  /** `visitor` swaps edit/settings for `visitorActions` (e.g. Follow). */
+  variant?: "self" | "visitor";
+  visitorActions?: ReactNode;
   editHref?: string;
   settingsHref?: string;
   heroEyebrow?: string;
@@ -18,6 +22,8 @@ type ProfileHeaderProps = {
 /** Narrative-heavy identity capsule layered like a dusk passport spread. */
 export function ProfileHeader({
   traveler,
+  variant = "self",
+  visitorActions,
   editHref = "/profile/edit",
   settingsHref = "/settings",
   heroEyebrow = "Wayfinding soul",
@@ -72,31 +78,35 @@ export function ProfileHeader({
               </div>
               <p className="text-[15px] leading-relaxed text-white/90 sm:max-w-2xl">{traveler.bio}</p>
 
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href={editHref}
-                  className={buttonClassName({
-                    variant: "primary",
-                    size: "md",
-                    fullWidth: true,
-                    className: "shadow-lg shadow-neutral-950/65 sm:flex-1 sm:min-w-[165px]",
-                  })}
-                >
-                  Edit profile
-                </Link>
-                <Link
-                  href={settingsHref}
-                  className={buttonClassName({
-                    variant: "secondary",
-                    size: "md",
-                    fullWidth: true,
-                    className:
-                      "border-white/55 bg-transparent text-white shadow-none hover:bg-white/12 sm:flex-1 sm:min-w-[165px]",
-                  })}
-                >
-                  Settings
-                </Link>
-              </div>
+              {variant === "visitor" && visitorActions ? (
+                <div className="flex flex-wrap gap-3 pt-1">{visitorActions}</div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href={editHref}
+                    className={buttonClassName({
+                      variant: "primary",
+                      size: "md",
+                      fullWidth: true,
+                      className: "shadow-lg shadow-neutral-950/65 sm:flex-1 sm:min-w-[165px]",
+                    })}
+                  >
+                    Edit profile
+                  </Link>
+                  <Link
+                    href={settingsHref}
+                    className={buttonClassName({
+                      variant: "secondary",
+                      size: "md",
+                      fullWidth: true,
+                      className:
+                        "border-white/55 bg-transparent text-white shadow-none hover:bg-white/12 sm:flex-1 sm:min-w-[165px]",
+                    })}
+                  >
+                    Settings
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

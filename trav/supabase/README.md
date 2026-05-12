@@ -84,6 +84,7 @@ Replace `src/lib/supabase/types.ts` in this repo so `@supabase/ssr` clients pick
 | --- | --- |
 | `schema.sql` | Tables, indexes, triggers, RLS policies, helper functions |
 | `migrations/20260210120000_post_media_storage_bucket.sql` | Storage bucket `post-media` + object policies for post images |
+| `migrations/20260211120000_follows_select_public_followees.sql` | Extra `follows` SELECT policy so follower counts work on **public** profiles |
 | `STORAGE_SETUP.md` | Dashboard steps + policy explanation for tript media uploads |
 
 No frontend code reads this folder automatically — wire queries when you replace mock data.

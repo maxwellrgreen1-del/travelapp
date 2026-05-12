@@ -51,6 +51,26 @@ function deriveMemberSince(user: User, fallbackIso: string): string {
   return `Wayfinder since ${year}`;
 }
 
+export function toPublicProfileHeaderViewModel(row: ProfileRow): MockTravelerSocialProfile {
+  const displayName = row.display_name?.trim() || row.username;
+  const username = row.username.trim().toLowerCase();
+  const year = new Date(row.created_at).getFullYear();
+
+  return {
+    ...mockTravelerSocial,
+    displayName,
+    username,
+    avatarUrl: row.avatar_url?.trim() || mockTravelerSocial.avatarUrl,
+    avatarAlt: `${displayName} profile photo`,
+    bio: row.bio?.trim() || "This explorer is still drafting their tript bio — say hello from their next recap.",
+    initialsFallback: deriveInitials(displayName),
+    memberSinceCopy: Number.isFinite(year) ? `Explorer since ${year}` : "Explorer on tript",
+    followersCount: 0,
+    followingCount: 0,
+    postsPublished: 0,
+  };
+}
+
 export function toProfileHeaderViewModel(row: ProfileRow, user: User): MockTravelerSocialProfile {
   const displayName = row.display_name?.trim() || deriveDisplayNameFromUser(user);
   const username = row.username.trim().toLowerCase();

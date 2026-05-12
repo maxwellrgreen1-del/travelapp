@@ -10,12 +10,14 @@ import type { TravelPostDetail } from "@/types";
 
 import { PostActions } from "@/features/feed/components/PostActions";
 import { PostCommentsSection } from "@/features/posts/comments/PostCommentsSection";
+import { PostDetailOwnerActions } from "@/features/posts/components/PostDetailOwnerActions";
 import { CommentPreviewList } from "@/features/posts/components/CommentPreviewList";
 import { ExternalLinksList } from "@/features/posts/components/ExternalLinksList";
 import { PlacesVisitedList } from "@/features/posts/components/PlacesVisitedList";
 import { RestaurantRecommendationList } from "@/features/posts/components/RestaurantRecommendationList";
 
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import { isPersistentPostId } from "@/lib/postIds";
 
 type PostDetailContentProps = {
   detail: TravelPostDetail;
@@ -62,6 +64,9 @@ export function PostDetailContent({ detail }: PostDetailContentProps) {
                 initialViewerHasLiked={detail.viewerHasLiked}
                 initialViewerHasSaved={detail.viewerHasSaved}
               />
+              {detail.viewerIsAuthor && isPersistentPostId(detail.id) ? (
+                <PostDetailOwnerActions postId={detail.id} />
+              ) : null}
             </div>
           </div>
         </section>

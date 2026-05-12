@@ -9,6 +9,8 @@ type Client = SupabaseClient<Database>;
 /** One masonry tile backing data — synced from Postgres, still photo-forward once media uploads land. */
 export type ProfileAuthorGridPost = {
   id: string;
+  /** Same as the profile being viewed — used for owner-only grid controls. */
+  authorId: string;
   title: string;
   locationDisplay: string;
   imageUrl: string;
@@ -35,7 +37,7 @@ const PROFILE_GRID_LIMIT = 60;
 export async function loadProfileAuthorPosts(client: Client, authorId: string): Promise<ProfileAuthorPostsPack> {
   const { data, error, count } = await client
     .from("posts")
-    .select("id, title, location_display", { count: "exact" })
+    .select("id, author_id, title, location_display", { count: "exact" })
     .eq("author_id", authorId)
     .order("created_at", { ascending: false })
     .limit(PROFILE_GRID_LIMIT);
@@ -68,6 +70,7 @@ export async function loadProfileAuthorPosts(client: Client, authorId: string): 
     const hero = primaryByPost.get(row.id);
     return {
       id: row.id,
+      authorId: row.author_id,
       title: row.title?.trim() || "Untitled trail",
       locationDisplay: row.location_display?.trim() || "Waypoint trail",
       imageUrl: hero?.url ?? SUPABASE_TRAVEL_CARD_IMAGE_URL,

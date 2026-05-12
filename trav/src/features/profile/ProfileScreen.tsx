@@ -270,7 +270,11 @@ export function ProfileScreen() {
         <TravelMapPreview pins={mockAtlasPins} />
 
         {user ? (
-          <ProfileAuthorPostsSection authorId={targetProfileId} onStoriesHydration={handleStoriesHydration} />
+          <ProfileAuthorPostsSection
+            authorId={targetProfileId}
+            viewerId={user.id}
+            onStoriesHydration={handleStoriesHydration}
+          />
         ) : null}
 
         <section aria-labelledby="saved-strip-heading" className="space-y-4 pb-8">

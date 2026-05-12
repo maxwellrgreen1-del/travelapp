@@ -55,6 +55,10 @@ export type TravelPostComment = {
 
 /** Full traveller log once detail views hydrate richer copy than timeline cards allow. */
 export type TravelPostDetail = TravelFeedPost & {
+  /** Present on Supabase-backed recaps — used for owner-only edit/delete. */
+  authorId?: string;
+  /** True when the signed-in user owns this post (SSR, Supabase only). */
+  viewerIsAuthor?: boolean;
   journal: string;
   placesVisited: string[];
   restaurants: string[];

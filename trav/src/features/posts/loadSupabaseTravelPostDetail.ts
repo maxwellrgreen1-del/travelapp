@@ -101,8 +101,12 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
   const heroUrl = gallery[0]?.url;
   const heroAlt = gallery[0]?.alt;
 
+  const viewerIsAuthor = Boolean(viewerId && viewerId === post.author_id);
+
   return {
     id: post.id,
+    authorId: post.author_id,
+    viewerIsAuthor,
     username: author.username,
     userInitials: initialsFromProfile(author.username, author.display_name ?? null),
     avatarUrl: author.avatar_url?.trim() || undefined,

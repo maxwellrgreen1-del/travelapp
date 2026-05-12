@@ -20,6 +20,8 @@ export type ProfileStoriesHydrationEvent =
 
 type ProfileAuthorPostsSectionProps = {
   authorId: string;
+  /** Current session user — passed into tiles for owner-only edit/delete. */
+  viewerId?: string | null;
   /** Bump from the parent when you need a hard refetch (optional). */
   reloadKey?: number;
   /** Fired whenever the Postgres round-trip crosses a UX milestone. */
@@ -54,6 +56,7 @@ function ProfileTripGridIntro() {
 /** Supabase-backed mantle for the traveller profile screen (map + dossier stay mocked for now). */
 export function ProfileAuthorPostsSection({
   authorId,
+  viewerId = null,
   reloadKey = 0,
   onStoriesHydration,
 }: ProfileAuthorPostsSectionProps) {
@@ -63,6 +66,7 @@ export function ProfileAuthorPostsSection({
   const [supabase] = useState(() => createClient());
   const [posts, setPosts] = useState<ProfileAuthorGridPost[]>([]);
   const [retryTick, setRetryTick] = useState(0);
+  const [gridReloadBump, setGridReloadBump] = useState(0);
 
   type FetchStatus = "loading" | "success" | "error";
   const [status, setStatus] = useState<FetchStatus>("loading");
@@ -102,7 +106,7 @@ export function ProfileAuthorPostsSection({
     return () => {
       cancelled = true;
     };
-  }, [authorId, reloadKey, retryTick, supabase]);
+  }, [authorId, reloadKey, retryTick, gridReloadBump, supabase]);
 
   if (status === "loading") {
     return (
@@ -155,5 +159,11 @@ export function ProfileAuthorPostsSection({
     );
   }
 
-  return <ProfilePostGrid posts={posts} />;
+  return (
+    <ProfilePostGrid
+      posts={posts}
+      viewerId={viewerId}
+      onPostDeleted={() => setGridReloadBump((n) => n + 1)}
+    />
+  );
 }

@@ -1,8 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { PopularExploreTrip, SuggestedExplorer } from "@/features/search/mockExploreData";
-import type { ExploreCategoryId } from "@/features/search/mockExploreData";
+import type { ExploreCategoryId, PopularExploreTrip, SuggestedExplorer } from "@/features/search/mockExploreData";
 import { pickPrimaryMediaByPostId } from "@/lib/media/pickPrimaryMediaUrlByPost";
+import { countByAuthorId, countByPostId } from "@/lib/ranking/countByPostId";
+import {
+  compareExplorePostTextRank,
+  compareExploreProfileTextRank,
+  rankExplorePostTextMatch,
+  rankExploreProfileTextMatch,
+} from "@/lib/ranking/exploreMatchRank";
 import type { Database } from "@/lib/supabase/types";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
 import { initialsFromProfile } from "@/lib/userDisplay";
@@ -45,7 +51,8 @@ type ProfileSearchRow = Pick<
 
 /**
  * Postgres ILIKE search across public posts (title, description, location line, waypoint names)
- * plus discoverable profiles (username, display name). No ranking beyond recency for posts.
+ * plus discoverable profiles (username, display name, bio). Results are re-ranked in-app for
+ * match quality (exact → starts-with → partial → description/bio) and light popularity signals.
  */
 export async function fetchExploreLiveResults(
   client: Client,
@@ -63,7 +70,7 @@ export async function fetchExploreLiveResults(
 
   const postSelect = "id, title, description, location_display, created_at" as const;
 
-  const [titleRes, descRes, locLineRes, locationIdsRes, userRes, displayRes] = await Promise.all([
+  const [titleRes, descRes, locLineRes, locationIdsRes, userRes, displayRes, bioRes] = await Promise.all([
     client.from("posts").select(postSelect).eq("visibility", "public").ilike("title", pattern).order("created_at", { ascending: false }).limit(MAX_POST_ROWS),
     client
       .from("posts")
@@ -87,9 +94,10 @@ export async function fetchExploreLiveResults(
       .eq("is_public", true)
       .ilike("display_name", pattern)
       .limit(MAX_PROFILE_ROWS),
+    client.from("profiles").select("id, username, display_name, avatar_url, bio").eq("is_public", true).ilike("bio", pattern).limit(MAX_PROFILE_ROWS),
   ]);
 
-  for (const res of [titleRes, descRes, locLineRes, locationIdsRes, userRes, displayRes]) {
+  for (const res of [titleRes, descRes, locLineRes, locationIdsRes, userRes, displayRes, bioRes]) {
     if (res.error) {
       return { ok: false, message: tidyMessage(res.error) };
     }
@@ -119,16 +127,44 @@ export async function fetchExploreLiveResults(
     merged.set(row.id, row);
   }
 
-  const orderedPosts = [...merged.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, MAX_POST_ROWS);
+  const mergedPosts = [...merged.values()];
+  const postIds = mergedPosts.map((p) => p.id);
+  const waypointHitSet = new Set((locationIdsRes.data ?? []).map((row) => row.post_id));
 
-  const postIds = orderedPosts.map((p) => p.id);
+  const likeCounts: Record<string, number> = {};
+  if (postIds.length > 0) {
+    const { data: likeRows, error: likesError } = await client.from("likes").select("post_id").in("post_id", postIds);
+    if (likesError) {
+      return { ok: false, message: tidyMessage(likesError) };
+    }
+    Object.assign(likeCounts, countByPostId(likeRows));
+  }
+
+  const orderedPosts = mergedPosts
+    .sort((a, b) => {
+      const ra = rankExplorePostTextMatch(needle, a, waypointHitSet.has(a.id));
+      const rb = rankExplorePostTextMatch(needle, b, waypointHitSet.has(b.id));
+      const tierCmp = compareExplorePostTextRank(ra, rb);
+      if (tierCmp !== 0) {
+        return tierCmp;
+      }
+      const likeA = Math.log1p(likeCounts[a.id] ?? 0);
+      const likeB = Math.log1p(likeCounts[b.id] ?? 0);
+      if (likeB !== likeA) {
+        return likeB - likeA;
+      }
+      return a.created_at < b.created_at ? 1 : -1;
+    })
+    .slice(0, MAX_POST_ROWS);
+
+  const rankedPostIds = orderedPosts.map((p) => p.id);
   const primaryImageByPost = new Map<string, string>();
 
-  if (postIds.length > 0) {
+  if (rankedPostIds.length > 0) {
     const { data: mediaRows, error: mediaError } = await client
       .from("post_media")
       .select("post_id, media_url, sort_order, alt_text")
-      .in("post_id", postIds);
+      .in("post_id", rankedPostIds);
 
     if (mediaError) {
       return { ok: false, message: tidyMessage(mediaError) };
@@ -150,13 +186,46 @@ export async function fetchExploreLiveResults(
   }));
 
   const profileMap = new Map<string, ProfileSearchRow>();
-  for (const row of [...(userRes.data ?? []), ...(displayRes.data ?? [])]) {
+  for (const row of [...(userRes.data ?? []), ...(displayRes.data ?? []), ...(bioRes.data ?? [])]) {
     profileMap.set(row.id, row);
   }
 
-  const profiles: SuggestedExplorer[] = [...profileMap.values()].map((row) => {
+  const profileRows = [...profileMap.values()];
+  const profileIds = profileRows.map((row) => row.id);
+
+  let publicPostsByAuthor: Record<string, number> = {};
+  if (profileIds.length > 0) {
+    const { data: authorPostRows, error: authorPostsError } = await client
+      .from("posts")
+      .select("author_id")
+      .eq("visibility", "public")
+      .in("author_id", profileIds);
+
+    if (authorPostsError) {
+      return { ok: false, message: tidyMessage(authorPostsError) };
+    }
+    publicPostsByAuthor = countByAuthorId(authorPostRows);
+  }
+
+  const sortedProfiles = [...profileRows].sort((a, b) => {
+    const ra = rankExploreProfileTextMatch(needle, a);
+    const rb = rankExploreProfileTextMatch(needle, b);
+    const tierCmp = compareExploreProfileTextRank(ra, rb);
+    if (tierCmp !== 0) {
+      return tierCmp;
+    }
+    const postsA = publicPostsByAuthor[a.id] ?? 0;
+    const postsB = publicPostsByAuthor[b.id] ?? 0;
+    if (postsB !== postsA) {
+      return postsB - postsA;
+    }
+    return (a.username ?? "").localeCompare(b.username ?? "");
+  });
+
+  const profiles: SuggestedExplorer[] = sortedProfiles.map((row) => {
     const username = row.username?.trim() || "traveler";
     const displayName = row.display_name?.trim() || username;
+    const publicCount = publicPostsByAuthor[row.id] ?? 0;
     return {
       id: row.id,
       displayName,
@@ -164,7 +233,7 @@ export async function fetchExploreLiveResults(
       initials: initialsFromProfile(username, row.display_name ?? null),
       avatarUrl: row.avatar_url?.trim() || undefined,
       tagline: row.bio?.trim() || "Explorer on tript — say hi from their next recap.",
-      followersLabel: "Public profile",
+      followersLabel: publicCount > 0 ? `${publicCount} public tript logs` : "Public profile",
       signatureTags: emptyCategories,
     };
   });

@@ -2,15 +2,14 @@ import type { TravelFeedPost } from "@/types";
 
 import { mockTravelPosts } from "@/features/feed/mockTravelPosts";
 import { hydrateFeedEngagement } from "@/features/engagement/hydrateFeedEngagement";
+import { countByPostId } from "@/lib/ranking/countByPostId";
+import { HOME_FEED_CANDIDATE_LIMIT, HOME_FEED_OUTPUT_LIMIT, scoreHomeFeedPost } from "@/lib/ranking/feedRankScore";
 import type { Database } from "@/lib/supabase/types";
 import { groupPostMediaGalleriesByPostId } from "@/lib/media/groupPostMediaGalleries";
 import { pickPrimaryMediaByPostId } from "@/lib/media/pickPrimaryMediaUrlByPost";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
 import { initialsFromProfile } from "@/lib/userDisplay";
 import { createClient } from "@/lib/supabase/server";
-
-/** Small first page — infinite scroll deliberately skipped for MVP. */
-const FEED_LIMIT = 30;
 
 type PostRow = Database["public"]["Tables"]["posts"]["Row"];
 type ProfileRow = Pick<Database["public"]["Tables"]["profiles"]["Row"], "id" | "username" | "display_name" | "avatar_url">;
@@ -45,6 +44,7 @@ function rowToTravelFeedPost(
   author: ProfileRow,
   orderedPlaceNames: string[],
   engagement: { likeCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean },
+  commentCount: number,
   cardImage?: { url: string; alt: string },
   mediaGallery?: { url: string; alt: string }[],
 ): TravelFeedPost {
@@ -65,7 +65,7 @@ function rowToTravelFeedPost(
     title: post.title,
     description: post.description?.trim() ?? "",
     likesCount: engagement.likeCount,
-    commentsCount: 0,
+    commentsCount: commentCount,
     viewerHasLiked: engagement.viewerHasLiked,
     viewerHasSaved: engagement.viewerHasSaved,
     destinationTags: [],
@@ -95,7 +95,7 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     .select("*")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
-    .limit(FEED_LIMIT);
+    .limit(HOME_FEED_CANDIDATE_LIMIT);
 
   if (postsResponse.error) {
     return {
@@ -121,6 +121,22 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     data: { user: authUser },
   } = await supabase.auth.getUser();
   const viewerId = authUser?.id ?? null;
+
+  async function fetchCommentRows(): Promise<{ data: { post_id: string }[] | null; error: unknown | null }> {
+    if (!postIds.length) {
+      return { data: [], error: null };
+    }
+    const { data, error } = await supabase.from("comments").select("post_id").in("post_id", postIds);
+    return { data, error };
+  }
+
+  async function fetchFollowingRows(): Promise<{ data: { following_id: string }[] | null; error: unknown | null }> {
+    if (!viewerId) {
+      return { data: [], error: null };
+    }
+    const { data, error } = await supabase.from("follows").select("following_id").eq("follower_id", viewerId);
+    return { data, error };
+  }
 
   async function fetchOrderedLocations(): Promise<{ data: LocationRow[] | null; error: unknown | null }> {
     if (!postIds.length) {
@@ -153,12 +169,15 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     return { data, error };
   }
 
-  const [profilesResponse, locationsResponse, engagementBundle, mediaResponse] = await Promise.all([
-    supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", authorIds),
-    fetchOrderedLocations(),
-    hydrateFeedEngagement(supabase, postIds, viewerId),
-    fetchPrimaryPostMedia(),
-  ]);
+  const [profilesResponse, locationsResponse, engagementBundle, mediaResponse, commentsResponse, followsResponse] =
+    await Promise.all([
+      supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", authorIds),
+      fetchOrderedLocations(),
+      hydrateFeedEngagement(supabase, postIds, viewerId),
+      fetchPrimaryPostMedia(),
+      fetchCommentRows(),
+      fetchFollowingRows(),
+    ]);
 
   if (profilesResponse.error) {
     return {
@@ -188,7 +207,23 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
     };
   }
 
+  if (commentsResponse.error) {
+    return {
+      type: "error",
+      message: friendlyFetchError(commentsResponse.error),
+    };
+  }
+
+  if (followsResponse.error) {
+    return {
+      type: "error",
+      message: friendlyFetchError(followsResponse.error),
+    };
+  }
+
   const { likeCounts, viewerLiked, viewerSaved } = engagementBundle.snapshot;
+  const commentCounts = countByPostId(commentsResponse.data);
+  const followingAuthorIds = new Set((followsResponse.data ?? []).map((row) => row.following_id));
 
   const primaryImageByPost = pickPrimaryMediaByPostId(mediaResponse.data ?? [], SUPABASE_TRAVEL_CARD_IMAGE_ALT);
   const galleriesByPost = groupPostMediaGalleriesByPostId(mediaResponse.data ?? [], SUPABASE_TRAVEL_CARD_IMAGE_ALT);
@@ -200,7 +235,19 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
 
   const locationBuckets = groupPlacesByPostId(locationsResponse.data);
 
-  const feedPosts: TravelFeedPost[] = [];
+  type FeedBundle = {
+    post: PostRow;
+    author: ProfileRow;
+    stops: string[];
+    engagement: { likeCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean };
+    commentCount: number;
+    followsAuthor: boolean;
+    cardImage?: { url: string; alt: string };
+    mediaGallery?: { url: string; alt: string }[];
+  };
+
+  const bundles: FeedBundle[] = [];
+  const nowMs = Date.now();
 
   for (const post of postRows) {
     const author = profilesById[post.author_id];
@@ -215,14 +262,55 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
         ? { url: orderedGallery[0]!.url, alt: orderedGallery[0]!.alt }
         : primaryImageByPost.get(post.id);
     const mediaGallery = orderedGallery && orderedGallery.length > 1 ? orderedGallery : undefined;
-    feedPosts.push(
-      rowToTravelFeedPost(post, author, stops, {
-        likeCount: likeCounts[post.id] ?? 0,
-        viewerHasLiked: viewerLiked.has(post.id),
-        viewerHasSaved: viewerSaved.has(post.id),
-      }, cardImage, mediaGallery),
-    );
+    const engagement = {
+      likeCount: likeCounts[post.id] ?? 0,
+      viewerHasLiked: viewerLiked.has(post.id),
+      viewerHasSaved: viewerSaved.has(post.id),
+    };
+    bundles.push({
+      post,
+      author,
+      stops,
+      engagement,
+      commentCount: commentCounts[post.id] ?? 0,
+      followsAuthor: viewerId ? followingAuthorIds.has(post.author_id) : false,
+      cardImage,
+      mediaGallery,
+    });
   }
+
+  const ranked = [...bundles]
+    .map((b) => ({
+      b,
+      score: scoreHomeFeedPost({
+        createdAtISO: b.post.created_at,
+        likeCount: b.engagement.likeCount,
+        commentCount: b.commentCount,
+        viewerFollowsAuthor: b.followsAuthor,
+        viewerHasSaved: b.engagement.viewerHasSaved,
+        nowMs,
+      }),
+    }))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return left.b.post.created_at < right.b.post.created_at ? 1 : -1;
+    })
+    .slice(0, HOME_FEED_OUTPUT_LIMIT)
+    .map(({ b }) =>
+      rowToTravelFeedPost(
+        b.post,
+        b.author,
+        b.stops,
+        b.engagement,
+        b.commentCount,
+        b.cardImage,
+        b.mediaGallery,
+      ),
+    );
+
+  const feedPosts: TravelFeedPost[] = ranked;
 
   /** If filtering removed everything, degrade to mock instead of printing an empty feed. */
   if (!feedPosts.length) {

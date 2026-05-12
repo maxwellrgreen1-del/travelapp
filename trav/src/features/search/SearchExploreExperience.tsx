@@ -142,7 +142,7 @@ export function SearchExploreExperience() {
     if (n > 0 && n < EXPLORE_LIVE_SEARCH_MIN_CHARS) {
       return `Type at least ${EXPLORE_LIVE_SEARCH_MIN_CHARS} letters to query live trip logs and travellers in Postgres.`;
     }
-    return "Live search reads trip titles, teasers, locations, waypoint names, usernames, and display names — mood boards below stay as inspiration.";
+    return "Live search reads trip titles, teasers, locations, waypoint names, usernames, display names, and bios — results favor close text matches and a bit of engagement — mood boards below stay as inspiration.";
   }, [discoveryEmpty, filtersActive, query]);
 
   function clearFilters() {

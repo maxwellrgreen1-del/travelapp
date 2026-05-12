@@ -16,12 +16,12 @@ type ImageCarouselProps = {
   priority?: boolean;
   /** Frame positioning / rounding (often `absolute inset-0` inside an aspect parent). */
   frameClassName: string;
-  /** Dots + optional arrows (only when `slides.length > 1`). */
+  /** Dots + arrows when `slides.length > 1` (hero uses slightly larger chrome). */
   controlsVariant?: "feed" | "hero";
 };
 
 /**
- * Stacked fades + swipe + dot / chevron navigation — shared by feed cards and post detail hero.
+ * Stacked fades + swipe + dots + chevrons — shared by feed cards and post detail hero.
  */
 export function ImageCarousel({ slides, sizes, priority = false, frameClassName, controlsVariant = "feed" }: ImageCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -117,40 +117,42 @@ export function ImageCarousel({ slides, sizes, priority = false, frameClassName,
             ))}
           </div>
 
-          {controlsVariant === "hero" ? (
-            <>
-              <button
-                type="button"
-                aria-label="Previous image"
-                className={cx(
-                  "absolute left-3 top-1/2 z-[18] -translate-y-1/2 rounded-full border border-white/55 bg-neutral-950/55 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white",
-                  "outline-none ring-white/80 transition hover:bg-white hover:text-neutral-950 focus-visible:ring-4",
-                )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  go(-1);
-                }}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                aria-label="Next image"
-                className={cx(
-                  "absolute right-3 top-1/2 z-[18] -translate-y-1/2 rounded-full border border-white/55 bg-neutral-950/55 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white",
-                  "outline-none ring-white/80 transition hover:bg-white hover:text-neutral-950 focus-visible:ring-4",
-                )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  go(1);
-                }}
-              >
-                ›
-              </button>
-            </>
-          ) : null}
+          <button
+            type="button"
+            aria-label="Previous image"
+            className={cx(
+              "absolute top-1/2 z-[18] -translate-y-1/2 rounded-full border border-white/55 bg-neutral-950/55 text-white",
+              "outline-none ring-white/80 transition hover:bg-white hover:text-neutral-950 focus-visible:ring-4",
+              controlsVariant === "hero"
+                ? "left-3 px-3 py-2 text-xs font-semibold uppercase tracking-wider"
+                : "left-2 px-2.5 py-1.5 text-sm font-semibold",
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              go(-1);
+            }}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            aria-label="Next image"
+            className={cx(
+              "absolute top-1/2 z-[18] -translate-y-1/2 rounded-full border border-white/55 bg-neutral-950/55 text-white",
+              "outline-none ring-white/80 transition hover:bg-white hover:text-neutral-950 focus-visible:ring-4",
+              controlsVariant === "hero"
+                ? "right-3 px-3 py-2 text-xs font-semibold uppercase tracking-wider"
+                : "right-2 px-2.5 py-1.5 text-sm font-semibold",
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              go(1);
+            }}
+          >
+            ›
+          </button>
         </>
       ) : null}
     </div>

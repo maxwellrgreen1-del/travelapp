@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { buildUniqueImageObjectName } from "@/lib/media/buildUniqueImageObjectName";
-import { validateImageFile } from "@/lib/media/validateImageFile";
+import { validateImageFileAsync } from "@/lib/media/validateImageFile";
 import type { Database } from "@/lib/supabase/types";
 import {
   buildPostMediaStoragePath,
@@ -62,7 +62,7 @@ export async function attachPostGalleryImagesFromFiles(
     const file = files[i]!;
     const slot = i + 1;
 
-    const validated = validateImageFile(file);
+    const validated = await validateImageFileAsync(file);
     if (!validated.ok) {
       failures.push({ slot, message: validated.message });
       continue;

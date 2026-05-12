@@ -22,7 +22,7 @@ import { publishTripPost } from "@/features/create/publishTripPost";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
 import { attachPostGalleryImagesFromFiles } from "@/features/media";
 import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
-import { validateImageFile } from "@/lib/media/validateImageFile";
+import { validateImageFileAsync } from "@/lib/media/validateImageFile";
 import { cx } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -92,7 +92,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     }
 
     for (const file of heroFiles) {
-      const heroCheck = validateImageFile(file);
+      const heroCheck = await validateImageFileAsync(file);
       if (!heroCheck.ok) {
         setHeroPickError(heroCheck.message);
         return;

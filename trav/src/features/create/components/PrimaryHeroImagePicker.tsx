@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClassName } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { BROWSER_FILE_ACCEPT_IMAGES, validateImageFile } from "@/lib/media/validateImageFile";
+import { BROWSER_FILE_ACCEPT_IMAGES, validateImageFileAsync } from "@/lib/media/validateImageFile";
 import { cx } from "@/lib/utils";
 
 type PrimaryHeroImagePickerProps = {
@@ -18,6 +17,14 @@ type PrimaryHeroImagePickerProps = {
   disabled?: boolean;
 };
 
+const pickAreaClass = cx(
+  "relative flex w-full flex-col items-center gap-4 rounded-[22px] border-2 border-dashed border-neutral-300 bg-neutral-50/85 px-4 py-10 text-center transition outline-none",
+  "hover:border-primary/60 hover:bg-primary/5 hover:shadow-inner focus-within:ring-4 focus-within:ring-primary/35",
+);
+
+const overlayInputClass =
+  "absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed disabled:opacity-0";
+
 /**
  * Single hero image for a trip log — matches Create Post card styling; gallery expansion can reuse patterns later.
  */
@@ -28,8 +35,6 @@ export function PrimaryHeroImagePicker({
   onValidationError,
   disabled = false,
 }: PrimaryHeroImagePickerProps) {
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,27 +47,27 @@ export function PrimaryHeroImagePicker({
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  function handlePickClick() {
-    if (disabled) return;
-    inputRef.current?.click();
-  }
-
-  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    const picked = event.target.files?.[0];
-    event.target.value = "";
-
+  async function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.target;
+    const raw = input.files;
+    const snapshots = raw && raw.length ? Array.from(raw) : [];
+    input.value = "";
+    const picked = snapshots[0];
     if (!picked) {
       return;
     }
 
-    const result = validateImageFile(picked);
-    if (!result.ok) {
-      onValidationError(result.message);
-      return;
+    try {
+      const result = await validateImageFileAsync(picked);
+      if (!result.ok) {
+        onValidationError(result.message);
+        return;
+      }
+      onValidationError(null);
+      onFileChange(picked);
+    } catch {
+      onValidationError("Something went wrong reading that photo — try again.");
     }
-
-    onValidationError(null);
-    onFileChange(picked);
   }
 
   function handleClear() {
@@ -86,17 +91,6 @@ export function PrimaryHeroImagePicker({
           </span>
         </div>
 
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="file"
-          accept={BROWSER_FILE_ACCEPT_IMAGES}
-          className="sr-only"
-          tabIndex={-1}
-          disabled={disabled}
-          onChange={handleInputChange}
-        />
-
         {validationError ? (
           <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
             {validationError}
@@ -105,14 +99,8 @@ export function PrimaryHeroImagePicker({
 
         {previewUrl ? (
           <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[22px] border border-neutral-200 bg-neutral-950/5 shadow-inner">
-            <Image
-              src={previewUrl}
-              alt="Selected cover preview"
-              fill
-              unoptimized
-              sizes="(max-width: 768px) 100vw, 720px"
-              className="object-cover"
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element -- blob preview */}
+            <img src={previewUrl} alt="Selected cover preview" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-4 py-4">
               <p className="min-w-0 truncate text-sm font-medium text-white drop-shadow">{file?.name}</p>
               <Button type="button" variant="outlinePrimary" size="sm" disabled={disabled} onClick={handleClear}>
@@ -120,33 +108,64 @@ export function PrimaryHeroImagePicker({
               </Button>
             </div>
           </div>
+        ) : disabled ? (
+          <div className={cx(pickAreaClass, "cursor-not-allowed opacity-50")}>
+            <div className="pointer-events-none flex flex-col items-center gap-4">
+              <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
+                <span aria-hidden>+</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-neutral-900">Add a cover image</p>
+                <p className="text-sm leading-relaxed text-neutral-600">Available after publishing finishes.</p>
+              </div>
+            </div>
+          </div>
         ) : (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={handlePickClick}
-            className={cx(
-              "flex w-full cursor-pointer flex-col items-center gap-4 rounded-[22px] border-2 border-dashed border-neutral-300 bg-neutral-50/85 px-4 py-10 text-center transition outline-none",
-              disabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-primary/60 hover:bg-primary/5 hover:shadow-inner focus-visible:ring-4 focus-visible:ring-primary/35",
-            )}
-          >
-            <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
-              <span aria-hidden>+</span>
+          <label className={cx(pickAreaClass, "cursor-pointer")}>
+            <input
+              type="file"
+              accept={BROWSER_FILE_ACCEPT_IMAGES}
+              disabled={disabled}
+              aria-label="Choose cover image"
+              className={overlayInputClass}
+              onChange={(e) => void handleInputChange(e)}
+            />
+            <div className="pointer-events-none relative z-10 flex flex-col items-center gap-4">
+              <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
+                <span aria-hidden>+</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-neutral-900">Add a cover image</p>
+                <p className="text-sm leading-relaxed text-neutral-600">Click this area to open your file picker.</p>
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose file</span>
             </div>
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-neutral-900">Add a cover image</p>
-              <p className="text-sm leading-relaxed text-neutral-600">Opens your device picker — preview shows here before you publish.</p>
-            </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose file</span>
-          </button>
+          </label>
         )}
 
         {previewUrl ? (
-          <Button type="button" variant="outlinePrimary" size="sm" disabled={disabled} onClick={handlePickClick} className="w-full sm:w-auto">
-            Replace image
-          </Button>
+          disabled ? (
+            <Button type="button" variant="outlinePrimary" size="sm" disabled className="w-full sm:w-auto">
+              Replace image
+            </Button>
+          ) : (
+            <label
+              className={cx(
+                buttonClassName({ variant: "outlinePrimary", size: "sm" }),
+                "relative inline-flex w-full cursor-pointer items-center justify-center overflow-hidden sm:w-auto",
+              )}
+            >
+              <input
+                type="file"
+                accept={BROWSER_FILE_ACCEPT_IMAGES}
+                disabled={disabled}
+                aria-label="Replace cover image"
+                className={overlayInputClass}
+                onChange={(e) => void handleInputChange(e)}
+              />
+              <span className="pointer-events-none relative z-10 px-4 py-2">Replace image</span>
+            </label>
+          )
         ) : null}
       </div>
     </Card>

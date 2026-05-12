@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClassName } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { BROWSER_FILE_ACCEPT_IMAGES, validateImageFile } from "@/lib/media/validateImageFile";
+import { BROWSER_FILE_ACCEPT_IMAGES, validateImageFileAsync } from "@/lib/media/validateImageFile";
 import { cx } from "@/lib/utils";
 
 const MAX_IMAGES = 5;
@@ -18,8 +17,18 @@ type PostGalleryImagePickerProps = {
   disabled?: boolean;
 };
 
+const pickAreaClass = cx(
+  "relative flex w-full flex-col items-center gap-4 rounded-[22px] border-2 border-dashed border-neutral-300 bg-neutral-50/85 px-4 py-10 text-center transition outline-none",
+  "hover:border-primary/60 hover:bg-primary/5 hover:shadow-inner focus-within:ring-4 focus-within:ring-primary/35",
+);
+
+/** Full-area invisible file input on top of the label — Windows often ignores `label[for]` → `sr-only` controls. */
+const overlayInputClass =
+  "absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed disabled:opacity-0";
+
 /**
  * Up to five ordered trip photos — previews stay in pick order until publish.
+ * File inputs sit on top of the dashed card (opacity 0) so the OS dialog opens on Windows/Edge.
  */
 export function PostGalleryImagePicker({
   files,
@@ -28,8 +37,6 @@ export function PostGalleryImagePicker({
   onValidationError,
   disabled = false,
 }: PostGalleryImagePickerProps) {
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
@@ -42,36 +49,37 @@ export function PostGalleryImagePicker({
     };
   }, [files]);
 
-  function handlePickClick() {
-    if (disabled) return;
-    inputRef.current?.click();
-  }
-
-  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    const list = event.target.files;
-    event.target.value = "";
-    if (!list?.length) {
+  async function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.target;
+    const raw = input.files;
+    const snapshots = raw && raw.length ? Array.from(raw) : [];
+    input.value = "";
+    if (!snapshots.length) {
       return;
     }
 
     const next: File[] = [...files];
     let firstError: string | null = null;
 
-    for (const picked of Array.from(list)) {
-      if (next.length >= MAX_IMAGES) {
-        if (!firstError) {
-          firstError = `You can attach up to ${MAX_IMAGES} photos on this MVP build — extra files were skipped.`;
+    try {
+      for (const picked of snapshots) {
+        if (next.length >= MAX_IMAGES) {
+          if (!firstError) {
+            firstError = `You can attach up to ${MAX_IMAGES} photos on this MVP build — extra files were skipped.`;
+          }
+          break;
         }
-        break;
-      }
-      const result = validateImageFile(picked);
-      if (!result.ok) {
-        if (!firstError) {
-          firstError = result.message;
+        const result = await validateImageFileAsync(picked);
+        if (!result.ok) {
+          if (!firstError) {
+            firstError = result.message;
+          }
+          continue;
         }
-        continue;
+        next.push(picked);
       }
-      next.push(picked);
+    } catch {
+      firstError = firstError ?? "Something went wrong reading that photo — try again.";
     }
 
     onValidationError(firstError);
@@ -105,18 +113,6 @@ export function PostGalleryImagePicker({
           </span>
         </div>
 
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="file"
-          accept={BROWSER_FILE_ACCEPT_IMAGES}
-          multiple
-          className="sr-only"
-          tabIndex={-1}
-          disabled={disabled}
-          onChange={handleInputChange}
-        />
-
         {validationError ? (
           <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
             {validationError}
@@ -124,47 +120,62 @@ export function PostGalleryImagePicker({
         ) : null}
 
         {files.length === 0 ? (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={handlePickClick}
-            className={cx(
-              "flex w-full cursor-pointer flex-col items-center gap-4 rounded-[22px] border-2 border-dashed border-neutral-300 bg-neutral-50/85 px-4 py-10 text-center transition outline-none",
-              disabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-primary/60 hover:bg-primary/5 hover:shadow-inner focus-visible:ring-4 focus-visible:ring-primary/35",
-            )}
-          >
-            <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
-              <span aria-hidden>+</span>
+          disabled ? (
+            <div className={cx(pickAreaClass, "cursor-not-allowed opacity-50")}>
+              <div className="pointer-events-none flex flex-col items-center gap-4">
+                <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
+                  <span aria-hidden>+</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-neutral-900">Add trip photos</p>
+                  <p className="text-sm leading-relaxed text-neutral-600">Available after publishing finishes.</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-neutral-900">Add trip photos</p>
-              <p className="text-sm leading-relaxed text-neutral-600">
-                Choose one or many — previews appear below in the same order before you publish.
-              </p>
-            </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose files</span>
-          </button>
+          ) : (
+            <label className={cx(pickAreaClass, "cursor-pointer")}>
+              <input
+                type="file"
+                accept={BROWSER_FILE_ACCEPT_IMAGES}
+                multiple
+                disabled={disabled}
+                aria-label="Choose trip photos"
+                className={overlayInputClass}
+                onChange={(e) => void handleInputChange(e)}
+              />
+              <div className="pointer-events-none relative z-10 flex flex-col items-center gap-4">
+                <div className="flex size-14 items-center justify-center rounded-[16px] border border-neutral-100 bg-white text-xl font-semibold text-primary shadow-sm">
+                  <span aria-hidden>+</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-neutral-900">Add trip photos</p>
+                  <p className="text-sm leading-relaxed text-neutral-600">
+                    Click this area to open your file picker — previews appear below in the same order before you publish.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose files</span>
+              </div>
+            </label>
+          )
         ) : (
           <ul className="grid list-none grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Selected trip photo previews">
             {files.map((file, index) => (
               <li key={`${file.name}-${file.size}-${index}`} className="relative">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950/5 shadow-inner">
                   {previewUrls[index] ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element -- local `blob:` previews
+                    <img
                       src={previewUrls[index]!}
                       alt={`Selected trip photo ${index + 1} preview`}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 45vw, 200px"
-                      className="object-cover"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : null}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
                     <p className="truncate text-[11px] font-medium text-white drop-shadow">{file.name}</p>
                   </div>
-                  <div className="absolute right-2 top-2 flex gap-1">
+                  <div className="pointer-events-none absolute right-2 top-2 flex gap-1">
                     <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">{index + 1}</span>
                   </div>
                   <Button
@@ -172,7 +183,7 @@ export function PostGalleryImagePicker({
                     variant="outlinePrimary"
                     size="sm"
                     disabled={disabled}
-                    className="absolute bottom-2 right-2 border-white/80 bg-neutral-950/70 text-[11px] text-white hover:bg-white hover:text-neutral-950"
+                    className="absolute bottom-2 right-2 z-30 border-white/80 bg-neutral-950/70 text-[11px] text-white hover:bg-white hover:text-neutral-950"
                     onClick={() => handleRemoveAt(index)}
                   >
                     Remove
@@ -185,9 +196,29 @@ export function PostGalleryImagePicker({
 
         {files.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outlinePrimary" size="sm" disabled={disabled || files.length >= MAX_IMAGES} onClick={handlePickClick}>
-              Add more photos
-            </Button>
+            {disabled || files.length >= MAX_IMAGES ? (
+              <Button type="button" variant="outlinePrimary" size="sm" disabled>
+                Add more photos
+              </Button>
+            ) : (
+              <label
+                className={cx(
+                  buttonClassName({ variant: "outlinePrimary", size: "sm" }),
+                  "relative inline-flex min-h-9 cursor-pointer items-center justify-center overflow-hidden px-3 text-sm",
+                )}
+              >
+                <input
+                  type="file"
+                  accept={BROWSER_FILE_ACCEPT_IMAGES}
+                  multiple
+                  disabled={disabled}
+                  aria-label="Add more trip photos"
+                  className={overlayInputClass}
+                  onChange={(e) => void handleInputChange(e)}
+                />
+                <span className="pointer-events-none relative z-10">Add more photos</span>
+              </label>
+            )}
             <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={handleClearAll}>
               Clear all
             </Button>

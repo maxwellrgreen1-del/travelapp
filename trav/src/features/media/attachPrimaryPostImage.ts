@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { buildUniqueImageObjectName } from "@/lib/media/buildUniqueImageObjectName";
-import { validateImageFile } from "@/lib/media/validateImageFile";
+import { validateImageFileAsync } from "@/lib/media/validateImageFile";
 import type { Database } from "@/lib/supabase/types";
 import {
   buildPostMediaStoragePath,
@@ -54,7 +54,7 @@ export async function attachPrimaryPostImageFromFile(
     return { ok: false, message: "That recap isn’t yours — open your own post and try again." };
   }
 
-  const validated = validateImageFile(file);
+  const validated = await validateImageFileAsync(file);
   if (!validated.ok) {
     return { ok: false, message: validated.message };
   }

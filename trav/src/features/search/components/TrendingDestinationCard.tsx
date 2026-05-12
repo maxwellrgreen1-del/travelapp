@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import { formatSocialCount } from "@/lib/formatSocialCount";
 import type { TrendingExploreDestination } from "@/features/search/mockExploreData";
 
@@ -9,13 +10,15 @@ export function TrendingDestinationCard({ destination }: { destination: Trending
   return (
     <Card padding="none" tone="muted" className="w-[200px] shrink-0 rounded-[30px] border-neutral-950/95 shadow-2xl shadow-neutral-950/55">
       <article className="relative isolate h-[300px] overflow-hidden rounded-[inherit] text-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <TriptRemoteImage
           src={destination.imageUrl}
           alt=""
           aria-hidden
+          fill
+          sizes="200px"
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover"
+          quality={75}
+          className="object-cover"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/45 to-transparent" />
 

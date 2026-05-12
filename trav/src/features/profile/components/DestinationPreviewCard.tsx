@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import type { TravelerSavedSpot } from "@/features/profile/mockTravelerProfile";
 import { cx } from "@/lib/utils";
 
@@ -12,14 +13,16 @@ export function DestinationPreviewCard({ destination, className }: DestinationPr
   return (
     <Card padding="none" className={cx("w-[220px] shrink-0 overflow-hidden rounded-[26px] border-neutral-950/85 shadow-lg shadow-neutral-950/40", className)}>
       <article aria-label={`${destination.name}, ${destination.subtitle}`}>
-        <div className="relative isolate aspect-[4/5] overflow-hidden rounded-t-[inherit]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative isolate aspect-[4/5] overflow-hidden rounded-t-[inherit] bg-neutral-100">
+          <TriptRemoteImage
             src={destination.imageUrl}
             alt=""
             aria-hidden
+            fill
+            sizes="220px"
             loading="lazy"
-            className="h-full w-full object-cover motion-safe:transition motion-safe:duration-500 hover:brightness-[1.05]"
+            quality={72}
+            className="object-cover motion-safe:transition motion-safe:duration-500 hover:brightness-[1.05]"
           />
           <span className="pointer-events-none absolute inset-0 rounded-t-[inherit] bg-gradient-to-b from-transparent via-transparent to-neutral-950/35" />
 

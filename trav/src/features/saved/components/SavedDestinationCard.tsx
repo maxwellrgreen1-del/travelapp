@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClassName } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import type { SavedDestinationPin } from "@/features/saved/mockSavedDestinations";
 import { savedDestinationCategoryOptions } from "@/features/saved/mockSavedDestinations";
 import { cx } from "@/lib/utils";
@@ -41,13 +42,15 @@ export function SavedDestinationCard({ destination, className }: SavedDestinatio
       )}
     >
       <article className="flex flex-col" aria-labelledby={`saved-name-${destination.id}`}>
-        <div className="relative isolate overflow-hidden rounded-t-[28px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative isolate aspect-[16/11] w-full overflow-hidden rounded-t-[28px] bg-neutral-100">
+          <TriptRemoteImage
             src={destination.imageUrl}
             alt={destination.imageAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, 520px"
             loading="lazy"
-            className="aspect-[16/11] h-full w-full object-cover motion-safe:transition motion-safe:duration-700 hover:brightness-[1.03]"
+            quality={78}
+            className="object-cover motion-safe:transition motion-safe:duration-700 hover:brightness-[1.03]"
           />
           <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/55 via-transparent to-neutral-950/15" />
 

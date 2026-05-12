@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import type { TravelFeedPost } from "@/types";
 import { cx } from "@/lib/utils";
 
@@ -26,15 +27,14 @@ export function PostDetailHero({ hero, backHref = "/", className }: PostDetailHe
       </div>
 
       <div className="relative aspect-[5/8] overflow-hidden rounded-b-[42px] sm:aspect-[4/6] lg:aspect-[16/10] lg:rounded-b-[48px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <TriptRemoteImage
           src={hero.imageUrl}
           alt={hero.imageAlt}
-          width={980}
-          height={1400}
-          loading="eager"
-          decoding="async"
-          className="h-full w-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          quality={85}
+          className="object-cover"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/45 to-transparent" />
         <div className="absolute inset-x-0 bottom-[32px] z-10 flex flex-col justify-end px-8 pb-[6px] text-[15px] text-white">

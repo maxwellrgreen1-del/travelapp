@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -103,9 +104,15 @@ export function PrimaryHeroImagePicker({
         ) : null}
 
         {previewUrl ? (
-          <div className="relative overflow-hidden rounded-[22px] border border-neutral-200 bg-neutral-950/5 shadow-inner">
-            {/* eslint-disable-next-line @next/next/no-img-element -- blob preview */}
-            <img src={previewUrl} alt="Selected cover preview" className="aspect-[16/10] w-full object-cover" />
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[22px] border border-neutral-200 bg-neutral-950/5 shadow-inner">
+            <Image
+              src={previewUrl}
+              alt="Selected cover preview"
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 720px"
+              className="object-cover"
+            />
             <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-4 py-4">
               <p className="min-w-0 truncate text-sm font-medium text-white drop-shadow">{file?.name}</p>
               <Button type="button" variant="outlinePrimary" size="sm" disabled={disabled} onClick={handleClear}>

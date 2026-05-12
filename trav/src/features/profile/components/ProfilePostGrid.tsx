@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import type { ProfileAuthorGridPost } from "@/features/profile/loadProfileAuthorPosts";
 import { cx } from "@/lib/utils";
 
@@ -43,12 +44,14 @@ export function ProfilePostGrid({
               )}
               aria-labelledby={`trail-${post.id}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <TriptRemoteImage
                 src={post.imageUrl}
                 alt={`${post.title} recap thumbnail`}
+                fill
+                sizes="(max-width: 640px) 33vw, 200px"
                 loading="lazy"
-                className="h-full w-full object-cover motion-safe:transition motion-safe:duration-[650ms] motion-safe:group-hover:scale-[1.04]"
+                quality={75}
+                className="object-cover motion-safe:transition motion-safe:duration-[650ms] motion-safe:group-hover:scale-[1.04]"
               />
 
               <div className="absolute inset-x-0 bottom-0 space-y-[7px] bg-gradient-to-t from-black via-black/45 to-transparent p-4 text-white opacity-[0.93] motion-safe:transition-opacity group-hover:opacity-100">

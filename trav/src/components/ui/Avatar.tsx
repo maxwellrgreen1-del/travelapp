@@ -1,5 +1,7 @@
-import type { ImgHTMLAttributes } from "react";
+import Image from "next/image";
 
+import { TRIPT_REMOTE_IMAGE_BLUR_DATA_URL } from "@/lib/imagePlaceholders";
+import { isRemoteImageHostOptimizable } from "@/lib/isRemoteImageHostOptimizable";
 import { cx } from "@/lib/utils";
 
 type AvatarSize = "sm" | "md" | "lg";
@@ -10,20 +12,31 @@ const sizeClasses: Record<AvatarSize, string> = {
   lg: "size-16 text-xl",
 };
 
-export type AvatarProps = ImgHTMLAttributes<HTMLImageElement> & {
+const imagePixels: Record<AvatarSize, number> = {
+  sm: 40,
+  md: 48,
+  lg: 64,
+};
+
+export type AvatarProps = {
+  src?: string;
+  alt?: string;
   /** Fallback letters when no `src` is provided yet. Usually two initials like "TJ". */
   initials?: string;
-  /** Visual diameter preset (distinct from `<img>` native attributes). */
+  /** Visual diameter preset. */
   size?: AvatarSize;
+  className?: string;
 };
 
 /**
  * Rounded avatar with initials fallback until profile photos arrive from Supabase.
  */
-export function Avatar({ src, alt = "", initials, size = "md", className, ...props }: AvatarProps) {
+export function Avatar({ src, alt = "", initials, size = "md", className }: AvatarProps) {
   const safeInitials = initials?.trim().slice(0, 2).toUpperCase() || "?";
+  const trimmed = src?.trim();
+  const px = imagePixels[size];
 
-  if (!src) {
+  if (!trimmed) {
     return (
       <div
         className={cx(
@@ -39,19 +52,42 @@ export function Avatar({ src, alt = "", initials, size = "md", className, ...pro
     );
   }
 
+  const isHttp = trimmed.startsWith("https://") || trimmed.startsWith("http://");
+
+  if (!isHttp || !isRemoteImageHostOptimizable(trimmed)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- non-http or host not in next/image allowlist
+      <img
+        src={trimmed}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        width={px}
+        height={px}
+        className={cx(
+          "inline-block shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm",
+          sizeClasses[size],
+          className,
+        )}
+      />
+    );
+  }
+
   return (
-    // tript allows remote Supabase uploads later — swap to `next/image` once URLs are gated in `remotePatterns`.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
+    <Image
+      src={trimmed}
       alt={alt}
+      width={px}
+      height={px}
+      sizes={`${px}px`}
+      placeholder="blur"
+      blurDataURL={TRIPT_REMOTE_IMAGE_BLUR_DATA_URL}
       loading="lazy"
       className={cx(
         "inline-block shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm",
         sizeClasses[size],
         className,
       )}
-      {...props}
     />
   );
 }

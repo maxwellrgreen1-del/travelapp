@@ -1,3 +1,4 @@
+import { TriptRemoteImage } from "@/components/media/TriptRemoteImage";
 import { cx } from "@/lib/utils";
 
 type PostMediaProps = {
@@ -9,17 +10,15 @@ type PostMediaProps = {
 /** Large hero frame with restrained motion so thumbs feel tactile on phones. */
 export function PostMedia({ imageUrl, imageAlt, className }: PostMediaProps) {
   return (
-    <figure className={cx("relative isolate w-full overflow-hidden bg-neutral-100", className)}>
-      {/* Remote scenic placeholders until uploads + Supabase land. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+    <figure className={cx("relative isolate aspect-[4/5] w-full overflow-hidden bg-neutral-100 md:aspect-[4/5]", className)}>
+      <TriptRemoteImage
         src={imageUrl}
         alt={imageAlt}
-        width={880}
-        height={1100}
+        fill
+        sizes="(max-width: 768px) 100vw, 720px"
         loading="lazy"
-        decoding="async"
-        className="aspect-[4/5] h-auto w-full object-cover transition duration-500 hover:scale-[1.01] active:brightness-95 md:aspect-[4/5]"
+        quality={80}
+        className="object-cover transition duration-500 hover:scale-[1.01] active:brightness-95"
       />
       <div
         aria-hidden

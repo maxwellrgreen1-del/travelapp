@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { PostCommentsSection } from "@/features/posts/comments/PostCommentsSection";
 import type { CommentsLoadPack } from "@/features/posts/comments/loadCommentsForPost";
@@ -20,50 +21,59 @@ type FeedCommentsSheetProps = {
 
 /**
  * Bottom sheet (mobile) / compact dialog (desktop) for trail chatter without leaving the feed.
+ *
+ * Portals to `document.body` so `position: fixed` is not trapped by the feed card’s
+ * `overflow-hidden` / `transform` (e.g. `active:translate-y`), which otherwise clips the scrim
+ * or leaves an invisible layer blocking taps after commenting.
  */
 export function FeedCommentsSheet({ open, onOpenChange, postId, postTitle, onCountChange }: FeedCommentsSheetProps) {
   const [supabase] = useState(() => createClient());
-  const [mounted, setMounted] = useState(false);
-  const [animateIn, setAnimateIn] = useState(false);
+  const [entered, setEntered] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pack, setPack] = useState<CommentsLoadPack | null>(null);
   const [threadKey, setThreadKey] = useState(0);
 
-  const hasEverOpened = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
+
+  const onCountChangeRef = useRef(onCountChange);
+  onCountChangeRef.current = onCountChange;
+
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  const fetchPack = useCallback(async () => {
+  const loadThread = useCallback(async () => {
     setLoading(true);
     const next = await loadCommentsForPost(supabase, postId);
-    setPack(next);
-    onCountChange(next.count);
-    setLoading(false);
-  }, [supabase, postId, onCountChange]);
-
-  useEffect(() => {
-    if (open) {
-      hasEverOpened.current = true;
-      setMounted(true);
-      const raf = window.requestAnimationFrame(() => setAnimateIn(true));
-      void fetchPack();
-      return () => window.cancelAnimationFrame(raf);
-    }
-
-    if (!hasEverOpened.current) {
+    if (!openRef.current) {
+      setLoading(false);
       return;
     }
-
-    setAnimateIn(false);
-    const hide = window.setTimeout(() => {
-      setMounted(false);
-      setPack(null);
-    }, 280);
-    return () => window.clearTimeout(hide);
-  }, [open, postId, fetchPack]);
+    setPack(next);
+    onCountChangeRef.current(next.count);
+    setLoading(false);
+  }, [supabase, postId]);
 
   useEffect(() => {
-    if (!mounted) {
+    if (!open) {
+      setEntered(false);
+      setPack(null);
+      setLoading(false);
+      return;
+    }
+    const raf = window.requestAnimationFrame(() => setEntered(true));
+    return () => window.cancelAnimationFrame(raf);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    void loadThread();
+  }, [open, postId, loadThread]);
+
+  useEffect(() => {
+    if (!open) {
       return;
     }
     const previousOverflow = document.body.style.overflow;
@@ -71,52 +81,60 @@ export function FeedCommentsSheet({ open, onOpenChange, postId, postTitle, onCou
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [mounted]);
+  }, [open]);
+
+  const dismiss = useCallback(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      active.blur();
+    }
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   useEffect(() => {
-    if (!open || !mounted) {
+    if (!open) {
       return;
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onOpenChange(false);
+        dismiss();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, mounted, onOpenChange]);
+  }, [open, dismiss]);
 
   useEffect(() => {
-    if (open && mounted && animateIn && !loading && closeRef.current) {
+    if (open && entered && !loading && closeRef.current) {
       closeRef.current.focus();
     }
-  }, [open, mounted, animateIn, loading]);
+  }, [open, entered, loading]);
 
   const handleRetrySync = useCallback(() => {
     setThreadKey((key) => key + 1);
-    void fetchPack();
-  }, [fetchPack]);
+    void loadThread();
+  }, [loadThread]);
 
-  if (!mounted) {
+  if (!open || typeof document === "undefined") {
     return null;
   }
 
   const heading = postTitle.trim() || "This trail";
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex flex-col justify-end sm:items-center sm:justify-center sm:p-5"
+      className="fixed inset-0 z-[200] flex flex-col justify-end sm:items-center sm:justify-center sm:p-5"
       role="presentation"
     >
       <button
         type="button"
         className={cx(
-          "absolute inset-0 bg-neutral-950/45 transition-opacity duration-200 motion-reduce:transition-none",
-          animateIn ? "opacity-100" : "opacity-0",
+          "absolute inset-0 z-0 bg-neutral-950/45 transition-opacity duration-200 motion-reduce:transition-none",
+          entered ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         aria-label="Close comments"
-        onClick={() => onOpenChange(false)}
+        onClick={dismiss}
       />
 
       <div
@@ -124,11 +142,11 @@ export function FeedCommentsSheet({ open, onOpenChange, postId, postTitle, onCou
         aria-modal
         aria-labelledby={titleId}
         className={cx(
-          "relative flex max-h-[min(88dvh,900px)] w-full flex-col overflow-hidden border border-neutral-200/90 bg-[#fcfbf9] shadow-[0_-24px_80px_-20px_rgba(15,23,42,0.55)] motion-reduce:transition-none",
+          "relative z-10 flex max-h-[min(88dvh,900px)] w-full flex-col overflow-hidden border border-neutral-200/90 bg-[#fcfbf9] shadow-[0_-24px_80px_-20px_rgba(15,23,42,0.55)] motion-reduce:transition-none",
           "rounded-t-[28px] sm:max-h-[min(80vh,720px)] sm:max-w-lg sm:rounded-[28px] sm:shadow-2xl",
           "max-sm:transition-transform max-sm:duration-300 max-sm:ease-out",
           "sm:transition-[transform,opacity] sm:duration-300 sm:ease-out",
-          animateIn ? "max-sm:translate-y-0 sm:translate-y-0 sm:scale-100 sm:opacity-100" : "max-sm:translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0",
+          entered ? "pointer-events-auto max-sm:translate-y-0 sm:translate-y-0 sm:scale-100 sm:opacity-100" : "pointer-events-none max-sm:translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0",
         )}
       >
         <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200/80 px-4 py-3 sm:px-5">
@@ -141,8 +159,8 @@ export function FeedCommentsSheet({ open, onOpenChange, postId, postTitle, onCou
           <button
             ref={closeRef}
             type="button"
-            className="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-600 outline-none ring-primary/30 transition hover:bg-neutral-200/60 hover:text-neutral-950 focus-visible:ring-4"
-            onClick={() => onOpenChange(false)}
+            className="relative z-20 shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-600 outline-none ring-primary/30 transition hover:bg-neutral-200/60 hover:text-neutral-950 focus-visible:ring-4"
+            onClick={dismiss}
           >
             Close
           </button>
@@ -163,13 +181,14 @@ export function FeedCommentsSheet({ open, onOpenChange, postId, postTitle, onCou
               initialComments={pack.items}
               initialTotalCount={pack.count}
               loadError={pack.errorMessage}
-              onCountChange={onCountChange}
+              onCountChange={(n) => onCountChangeRef.current(n)}
               variant="sheet"
               onRetrySync={handleRetrySync}
             />
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

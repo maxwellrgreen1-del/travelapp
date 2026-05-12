@@ -14,13 +14,13 @@ import {
   LinkListInputPlaceholder,
   type CreatorLinkDraft,
   PlacesVisitedInputPlaceholder,
-  PrimaryHeroImagePicker,
+  PostGalleryImagePicker,
   TagInputPlaceholder,
 } from "@/features/create/components";
 import { stashPostMediaUploadWarning } from "@/features/create/postPublishMediaWarningSession";
 import { publishTripPost } from "@/features/create/publishTripPost";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
-import { attachPrimaryPostImageFromFile } from "@/features/media";
+import { attachPostGalleryImagesFromFiles } from "@/features/media";
 import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
 import { validateImageFile } from "@/lib/media/validateImageFile";
 import { cx } from "@/lib/utils";
@@ -34,7 +34,7 @@ function summarizePlaces(rows: string[]) {
   return rows.map((row) => row.trim()).filter(Boolean);
 }
 
-/** Authenticated composer — core fields + optional hero image persist to Supabase. */
+/** Authenticated composer — core fields + optional gallery persist to Supabase. */
 export function CreatePostForm({ user }: CreatePostFormProps) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -48,12 +48,12 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
   const [destinationTags, setDestinationTags] = useState<string[]>([]);
   const [externalLinks, setExternalLinks] = useState<CreatorLinkDraft[]>([]);
 
-  const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [heroFiles, setHeroFiles] = useState<File[]>([]);
   const [heroPickError, setHeroPickError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<CreatePostCoreErrors>({});
   const [publishing, setPublishing] = useState(false);
-  const [publishBusyLabel, setPublishBusyLabel] = useState<"Saving trip…" | "Uploading cover…">("Saving trip…");
+  const [publishBusyLabel, setPublishBusyLabel] = useState<"Saving trip…" | "Uploading photos…">("Saving trip…");
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const interactionLocked = publishing;
@@ -75,7 +75,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     setPlacesVisited([""]);
     setDestinationTags([]);
     setExternalLinks([]);
-    setHeroFile(null);
+    setHeroFiles([]);
     setHeroPickError(null);
     setErrors({});
     setPublishing(false);
@@ -91,8 +91,8 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       return;
     }
 
-    if (heroFile) {
-      const heroCheck = validateImageFile(heroFile);
+    for (const file of heroFiles) {
+      const heroCheck = validateImageFile(file);
       if (!heroCheck.ok) {
         setHeroPickError(heroCheck.message);
         return;
@@ -128,17 +128,22 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       return;
     }
 
-    if (heroFile) {
-      setPublishBusyLabel("Uploading cover…");
-      const imageResult = await attachPrimaryPostImageFromFile(supabase, {
+    if (heroFiles.length > 0) {
+      setPublishBusyLabel("Uploading photos…");
+      const galleryResult = await attachPostGalleryImagesFromFiles(supabase, {
         postId: result.postId,
         authorId: user.id,
-        file: heroFile,
+        files: heroFiles,
         altText: tripTitle.trim(),
       });
 
-      if (!imageResult.ok) {
-        stashPostMediaUploadWarning(result.postId, imageResult.message);
+      if (galleryResult.failures.length > 0) {
+        const detail = galleryResult.failures.map((f) => `Photo ${f.slot}: ${f.message}`).join(" · ");
+        const prefix =
+          galleryResult.uploadedCount > 0
+            ? `Only ${galleryResult.uploadedCount} of ${heroFiles.length} photos could be saved. `
+            : "None of your photos could be saved. ";
+        stashPostMediaUploadWarning(result.postId, `${prefix}${detail}`);
       }
     }
 
@@ -157,7 +162,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
     <form className="space-y-6 px-3 pb-10 pt-4 sm:px-4" onSubmit={handleSubmit} noValidate>
       <PageHeader
         title="Compose travel log"
-        subtitle="Core recap fields and an optional cover photo publish to Supabase — waypoints sync; restaurants, tags, and links stay local for now."
+        subtitle="Core recap fields and optional trip photos publish to Supabase — waypoints sync; restaurants, tags, and links stay local for now."
       />
 
       {publishError ? (
@@ -230,10 +235,10 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         </fieldset>
       </Card>
 
-      <PrimaryHeroImagePicker
+      <PostGalleryImagePicker
         disabled={interactionLocked}
-        file={heroFile}
-        onFileChange={setHeroFile}
+        files={heroFiles}
+        onFilesChange={setHeroFiles}
         validationError={heroPickError}
         onValidationError={setHeroPickError}
       />
@@ -270,7 +275,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
         <div className="space-y-2 text-sm text-neutral-600">
           <p className="font-semibold text-neutral-950">Publishing lands in Postgres.</p>
           <p className="text-pretty">
-            Trip title, location line, teaser, journal, waypoints, and optional cover photo sync to Supabase. If the image step fails after the post
+            Trip title, location line, teaser, journal, waypoints, and up to five optional photos sync to Supabase. If some uploads fail after the post
             saves, you will still land on your recap with a heads-up banner.
           </p>
         </div>

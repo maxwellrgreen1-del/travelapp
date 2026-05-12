@@ -3,6 +3,7 @@ import type { TravelFeedPost } from "@/types";
 import { mockTravelPosts } from "@/features/feed/mockTravelPosts";
 import { hydrateFeedEngagement } from "@/features/engagement/hydrateFeedEngagement";
 import type { Database } from "@/lib/supabase/types";
+import { groupPostMediaGalleriesByPostId } from "@/lib/media/groupPostMediaGalleries";
 import { pickPrimaryMediaByPostId } from "@/lib/media/pickPrimaryMediaUrlByPost";
 import { SUPABASE_TRAVEL_CARD_IMAGE_ALT, SUPABASE_TRAVEL_CARD_IMAGE_URL } from "@/lib/travelPostPlaceholders";
 import { initialsFromProfile } from "@/lib/userDisplay";
@@ -45,6 +46,7 @@ function rowToTravelFeedPost(
   orderedPlaceNames: string[],
   engagement: { likeCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean },
   cardImage?: { url: string; alt: string },
+  mediaGallery?: { url: string; alt: string }[],
 ): TravelFeedPost {
   const placesPreview =
     orderedPlaceNames.length > 0 ? orderedPlaceNames.slice(0, PLACES_PREVIEW_LIMIT) : undefined;
@@ -59,6 +61,7 @@ function rowToTravelFeedPost(
     locationDisplay,
     imageUrl: cardImage?.url ?? SUPABASE_TRAVEL_CARD_IMAGE_URL,
     imageAlt: cardImage?.alt ?? SUPABASE_TRAVEL_CARD_IMAGE_ALT,
+    mediaGallery,
     title: post.title,
     description: post.description?.trim() ?? "",
     likesCount: engagement.likeCount,
@@ -188,6 +191,7 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
   const { likeCounts, viewerLiked, viewerSaved } = engagementBundle.snapshot;
 
   const primaryImageByPost = pickPrimaryMediaByPostId(mediaResponse.data ?? [], SUPABASE_TRAVEL_CARD_IMAGE_ALT);
+  const galleriesByPost = groupPostMediaGalleriesByPostId(mediaResponse.data ?? [], SUPABASE_TRAVEL_CARD_IMAGE_ALT);
 
   const profilesById: Record<string, ProfileRow> = {};
   for (const profile of profilesResponse.data ?? []) {
@@ -205,13 +209,18 @@ export async function loadHomeFeedPayload(): Promise<HomeFeedResult> {
       continue;
     }
     const stops = locationBuckets[post.id] ?? [];
-    const cardImage = primaryImageByPost.get(post.id);
+    const orderedGallery = galleriesByPost.get(post.id);
+    const cardImage =
+      orderedGallery && orderedGallery.length > 0
+        ? { url: orderedGallery[0]!.url, alt: orderedGallery[0]!.alt }
+        : primaryImageByPost.get(post.id);
+    const mediaGallery = orderedGallery && orderedGallery.length > 1 ? orderedGallery : undefined;
     feedPosts.push(
       rowToTravelFeedPost(post, author, stops, {
         likeCount: likeCounts[post.id] ?? 0,
         viewerHasLiked: viewerLiked.has(post.id),
         viewerHasSaved: viewerSaved.has(post.id),
-      }, cardImage),
+      }, cardImage, mediaGallery),
     );
   }
 

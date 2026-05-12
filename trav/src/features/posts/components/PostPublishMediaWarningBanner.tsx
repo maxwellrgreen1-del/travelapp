@@ -37,14 +37,15 @@ export function PostPublishMediaWarningBanner({ postId }: PostPublishMediaWarnin
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="font-semibold">Cover photo did not upload</p>
+        <p className="font-semibold">Photo upload notice</p>
         <Button type="button" variant="ghost" size="sm" className="shrink-0 text-amber-950" onClick={() => setDismissed(true)}>
           Dismiss
         </Button>
       </div>
       <p>{message}</p>
       <p className="text-xs text-amber-900/90">
-        Your trip log is saved — you can try adding a photo again from a future edit flow, or re-compose from Create with the same text.
+        Your trip log is saved — any photos that succeeded are already on the recap. You can add more from a future edit flow, or return to Create if you
+        need to re-run the composer.
       </p>
     </div>
   );

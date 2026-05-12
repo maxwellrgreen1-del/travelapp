@@ -47,15 +47,17 @@ export function PostDetailScreen({ requestedId, detail }: PostDetailScreenProps)
     );
   }
 
+  const heroSlides =
+    detail.mediaGallery && detail.mediaGallery.length > 1
+      ? detail.mediaGallery.map((m) => ({ imageUrl: m.url, imageAlt: m.alt }))
+      : [{ imageUrl: detail.imageUrl, imageAlt: detail.imageAlt }];
+
   return (
     <article className="min-h-[100vh] bg-gradient-to-b from-[#fbfaf7] via-white to-[#ecf4ea] pb-36 text-neutral-900">
       <PostDetailHero
-        hero={{
-          imageUrl: detail.imageUrl,
-          imageAlt: detail.imageAlt,
-          locationDisplay: detail.locationDisplay,
-          title: detail.title,
-        }}
+        slides={heroSlides}
+        locationDisplay={detail.locationDisplay}
+        title={detail.title}
       />
 
       <div className="relative z-20 px-5">

@@ -69,29 +69,37 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
 
   const commentsPromise = loadCommentsForPost(supabase, requestedId);
 
-  const primaryMediaPromise = supabase
+  const postMediaPromise = supabase
     .from("post_media")
     .select("media_url, alt_text, sort_order")
     .eq("post_id", requestedId)
-    .order("sort_order", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("sort_order", { ascending: true });
 
-  const [likesHead, viewerLikeRes, viewerSaveRes, commentsPack, primaryMediaRes] = await Promise.all([
+  const [likesHead, viewerLikeRes, viewerSaveRes, commentsPack, postMediaRes] = await Promise.all([
     totalLikesPromise,
     viewerLikePromise,
     viewerSavePromise,
     commentsPromise,
-    primaryMediaPromise,
+    postMediaPromise,
   ]);
 
   const likesCount =
     likesHead.error || typeof likesHead.count !== "number" ? 0 : likesHead.count;
 
-  const heroUrl =
-    primaryMediaRes.error || !primaryMediaRes.data ? undefined : primaryMediaRes.data.media_url?.trim() || undefined;
-  const heroAlt =
-    primaryMediaRes.error || !primaryMediaRes.data ? undefined : primaryMediaRes.data.alt_text?.trim() || undefined;
+  const mediaRows = postMediaRes.error ? [] : (postMediaRes.data ?? []);
+  const gallery = mediaRows
+    .map((row) => {
+      const url = row.media_url?.trim();
+      if (!url) return null;
+      return {
+        url,
+        alt: row.alt_text?.trim() || SUPABASE_TRAVEL_CARD_IMAGE_ALT,
+      };
+    })
+    .filter((row): row is { url: string; alt: string } => Boolean(row));
+
+  const heroUrl = gallery[0]?.url;
+  const heroAlt = gallery[0]?.alt;
 
   return {
     id: post.id,
@@ -101,6 +109,7 @@ export async function loadSupabaseTravelPostDetail(requestedId: string): Promise
     locationDisplay: locationLine,
     imageUrl: heroUrl || SUPABASE_TRAVEL_CARD_IMAGE_URL,
     imageAlt: heroAlt || SUPABASE_TRAVEL_CARD_IMAGE_ALT,
+    mediaGallery: gallery.length > 1 ? gallery : undefined,
     title: post.title,
     description: post.description ?? "",
     likesCount,

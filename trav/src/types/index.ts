@@ -13,9 +13,11 @@ export type TravelFeedPost = {
   avatarUrl?: string;
   /** Display place string like "Laguna Llaca · Peru". */
   locationDisplay: string;
-  /** Scenic preview for the itinerary card — becomes multi-media later. */
+  /** Scenic preview for the itinerary card — first `post_media` row (or placeholder). */
   imageUrl: string;
   imageAlt: string;
+  /** Two or more `post_media` rows — feed carousel dots + swipe. Omitted when only one (or zero) images. */
+  mediaGallery?: { url: string; alt: string }[];
   title: string;
   /** Short teaser under the headline. */
   description: string;

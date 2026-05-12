@@ -36,7 +36,7 @@ export function PostCard({ post }: PostCardProps) {
         )}
         prefetch={false}
       >
-        <PostMedia imageUrl={post.imageUrl} imageAlt={post.imageAlt} />
+        <PostMedia imageUrl={post.imageUrl} imageAlt={post.imageAlt} gallery={post.mediaGallery} />
       </Link>
 
       <section className="space-y-3 px-4 pb-5 pt-3">

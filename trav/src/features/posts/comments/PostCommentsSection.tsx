@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +28,10 @@ type PostCommentsSectionProps = {
   loadError: string | null;
   /** Keeps hero `PostActions` counts aligned with campfire adds/removals. */
   onCountChange: (nextTotal: number) => void;
+  /** Tighter layout for the feed bottom sheet vs the full post page. */
+  variant?: "default" | "sheet";
+  /** When set (e.g. feed sheet), retry re-fetches comments instead of `router.refresh()`. */
+  onRetrySync?: () => void;
 };
 
 const MAX_CHARS = 2000;
@@ -39,8 +43,11 @@ export function PostCommentsSection({
   initialTotalCount,
   loadError,
   onCountChange,
+  variant = "default",
+  onRetrySync,
 }: PostCommentsSectionProps) {
   const router = useRouter();
+  const headingId = useId();
   const { user, isLoading: authLoading } = useAuthSession();
   const [supabase] = useState(() => createClient());
 
@@ -234,13 +241,25 @@ export function PostCommentsSection({
     [bumpTotalCount, comments, supabase, user],
   );
 
+  const isSheet = variant === "sheet";
+
   return (
-    <section id="comments" aria-labelledby="post-comments-heading" className="space-y-6">
-      <div className="px-2">
-        <h2 id="post-comments-heading" className="text-[11px] font-semibold uppercase tracking-[0.35em] text-primary">
+    <section
+      id={isSheet ? undefined : "comments"}
+      aria-labelledby={headingId}
+      className={cx("space-y-6", isSheet && "space-y-4")}
+    >
+      <div className={cx("px-2", isSheet && "px-1")}>
+        <h2
+          id={headingId}
+          className={cx(
+            "font-semibold uppercase tracking-[0.35em] text-primary",
+            isSheet ? "text-[10px] tracking-[0.28em]" : "text-[11px]",
+          )}
+        >
           Trail chatter
         </h2>
-        <p className="mt-[6px] text-sm leading-relaxed text-neutral-600">
+        <p className={cx("mt-[6px] leading-relaxed text-neutral-600", isSheet ? "text-[13px]" : "text-sm")}>
           Newest scouts surface first · {totalCount === 1 ? `1 traveler chimed in` : `${totalCount} travelers chimed in`}
         </p>
       </div>
@@ -250,7 +269,18 @@ export function PostCommentsSection({
           <p className="font-semibold">Thread stutter</p>
           <p className="mt-1">{sectionError}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" variant="outlinePrimary" size="sm" onClick={() => router.refresh()}>
+            <Button
+              type="button"
+              variant="outlinePrimary"
+              size="sm"
+              onClick={() => {
+                if (onRetrySync) {
+                  onRetrySync();
+                  return;
+                }
+                router.refresh();
+              }}
+            >
               Retry sync
             </Button>
             {draft.trim() ? (
@@ -262,16 +292,26 @@ export function PostCommentsSection({
         </Card>
       ) : null}
 
-      <Card padding="lg" className="rounded-[26px] border-neutral-950/93 bg-white/98 shadow-lg shadow-neutral-950/55">
+      <Card
+        padding="lg"
+        className={cx(
+          "rounded-[26px] border-neutral-950/93 bg-white/98 shadow-lg shadow-neutral-950/55",
+          isSheet && "rounded-[22px] shadow-md shadow-neutral-950/25",
+        )}
+      >
         {authLoading ? (
           <p className="text-sm text-neutral-500">Connecting your campfire badge…</p>
         ) : user ? (
           <div className="space-y-3">
             <Textarea
               label="Cheer · question · riff"
-              hint={`Logged in as @${viewerProfile?.username ?? "your handle"} — taps stay synced to Postgres.`}
+              hint={
+                isSheet
+                  ? `As @${viewerProfile?.username ?? "your handle"} · synced to this post.`
+                  : `Logged in as @${viewerProfile?.username ?? "your handle"} — taps stay synced to Postgres.`
+              }
               placeholder="Lay a scouting note beside this trail…"
-              rows={4}
+              rows={isSheet ? 3 : 4}
               value={draft}
               maxLength={MAX_CHARS}
               disabled={submitting || !viewerProfile}
@@ -329,7 +369,14 @@ export function PostCommentsSection({
 
             return (
               <li key={comment.id}>
-                <Card padding="lg" tone="muted" className="border-neutral-950/92 bg-white shadow-lg shadow-neutral-950/35">
+                <Card
+                  padding={isSheet ? "md" : "lg"}
+                  tone="muted"
+                  className={cx(
+                    "border-neutral-950/92 bg-white shadow-lg shadow-neutral-950/35",
+                    isSheet && "rounded-[20px] shadow-md shadow-neutral-950/20",
+                  )}
+                >
                   <div className="flex gap-[14px]">
                     <Avatar
                       size="sm"

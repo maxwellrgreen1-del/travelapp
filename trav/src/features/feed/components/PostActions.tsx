@@ -17,8 +17,14 @@ type PostActionsProps = {
   /** Hydrated on the server for Supabase UUID posts; mock slugs omit these. */
   initialViewerHasLiked?: boolean;
   initialViewerHasSaved?: boolean;
-  /** Share an anchor with the eventual comments rail. */
+  /** Share an anchor with the eventual comments rail (detail page). */
   commentHrefFragment?: string;
+  /** Feed: open inline sheet instead of navigating to `/post/[id]#comments`. */
+  commentsInteraction?: "detailLink" | "inlineSheet";
+  /** Required when `commentsInteraction` is `inlineSheet`. */
+  onOpenCommentsInline?: () => void;
+  /** When the inline sheet is open (feed only) — drives `aria-expanded` on the comment control. */
+  commentsSheetOpen?: boolean;
 };
 
 /**
@@ -31,6 +37,9 @@ export function PostActions({
   initialViewerHasLiked = false,
   initialViewerHasSaved = false,
   commentHrefFragment = "comments",
+  commentsInteraction = "detailLink",
+  onOpenCommentsInline,
+  commentsSheetOpen,
 }: PostActionsProps) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthSession();
@@ -64,6 +73,14 @@ export function PostActions({
   }, [actionError]);
 
   const commentHref = `/post/${postId}#${commentHrefFragment}`;
+
+  const useInlineCommentsSheet = commentsInteraction === "inlineSheet" && typeof onOpenCommentsInline === "function";
+
+  const openComments = useCallback(() => {
+    if (useInlineCommentsSheet) {
+      onOpenCommentsInline?.();
+    }
+  }, [onOpenCommentsInline, useInlineCommentsSheet]);
 
   const likeControlDisabled = persistEngagement && (authLoading || likeBusy);
   const saveControlDisabled = persistEngagement && (authLoading || saveBusy);
@@ -164,14 +181,26 @@ export function PostActions({
             <HeartIcon filled={liked} className={liked ? "text-primary drop-shadow-[0_0_6px_rgba(133,187,101,0.55)]" : "text-neutral-800"} />
           </button>
 
-          <Link
-            href={commentHref}
-            className="-m-2 rounded-xl p-2 text-neutral-800 outline-none ring-primary/30 transition hover:bg-primary/10 hover:text-neutral-950 active:scale-[0.96] focus-visible:ring-4"
-            prefetch={false}
-            aria-label={`Open comments · ${commentsCount} notes`}
-          >
-            <BubbleIcon aria-hidden />
-          </Link>
+          {useInlineCommentsSheet ? (
+            <button
+              type="button"
+              onClick={openComments}
+              className="-m-2 rounded-xl p-2 text-neutral-800 outline-none ring-primary/30 transition hover:bg-primary/10 hover:text-neutral-950 active:scale-[0.96] focus-visible:ring-4"
+              aria-label={`Open comments · ${commentsCount} notes`}
+              aria-expanded={commentsSheetOpen === true}
+            >
+              <BubbleIcon aria-hidden />
+            </button>
+          ) : (
+            <Link
+              href={commentHref}
+              className="-m-2 rounded-xl p-2 text-neutral-800 outline-none ring-primary/30 transition hover:bg-primary/10 hover:text-neutral-950 active:scale-[0.96] focus-visible:ring-4"
+              prefetch={false}
+              aria-label={`Open comments · ${commentsCount} notes`}
+            >
+              <BubbleIcon aria-hidden />
+            </Link>
+          )}
         </div>
 
         <span className="flex-1" aria-hidden />
@@ -214,12 +243,31 @@ export function PostActions({
         ) : null}
 
         {commentsCount > 0 ? (
-          <Link
-            href={commentHref}
-            className="inline-flex text-neutral-600 outline-none ring-primary/30 transition hover:text-neutral-950 focus-visible:ring-4"
+          useInlineCommentsSheet ? (
+            <button
+              type="button"
+              onClick={openComments}
+              className="inline-flex text-left text-neutral-600 outline-none ring-primary/30 transition hover:text-neutral-950 focus-visible:ring-4"
+            >
+              View all {commentsCount.toLocaleString()} comments
+            </button>
+          ) : (
+            <Link
+              href={commentHref}
+              className="inline-flex text-neutral-600 outline-none ring-primary/30 transition hover:text-neutral-950 focus-visible:ring-4"
+              prefetch={false}
+            >
+              View all {commentsCount.toLocaleString()} comments
+            </Link>
+          )
+        ) : useInlineCommentsSheet ? (
+          <button
+            type="button"
+            onClick={openComments}
+            className="text-left text-xs text-neutral-500 outline-none ring-primary/30 transition hover:text-neutral-700 focus-visible:ring-4"
           >
-            View all {commentsCount.toLocaleString()} comments
-          </Link>
+            Be first to leave a trail note here.
+          </button>
         ) : (
           <p className="text-xs text-neutral-500">Trail notes open once friends comment.</p>
         )}

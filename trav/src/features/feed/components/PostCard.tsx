@@ -1,12 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
-import { cx } from "@/lib/utils";
-import type { TravelFeedPost } from "@/types";
-
+import { FeedCommentsSheet } from "@/features/feed/components/FeedCommentsSheet";
 import { PostActions } from "@/features/feed/components/PostActions";
 import { PostHeader } from "@/features/feed/components/PostHeader";
 import { PostMedia } from "@/features/feed/components/PostMedia";
+import { isPersistentPostId } from "@/lib/postIds";
+import { cx } from "@/lib/utils";
+import type { TravelFeedPost } from "@/types";
 
 type PostCardProps = {
   post: TravelFeedPost;
@@ -15,6 +19,22 @@ type PostCardProps = {
 /** Full-width vertical card resembling a distilled Instagram travel reel. */
 export function PostCard({ post }: PostCardProps) {
   const detailHref = `/post/${post.id}`;
+  const persist = isPersistentPostId(post.id);
+
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [liveCommentCount, setLiveCommentCount] = useState(post.commentsCount);
+
+  useEffect(() => {
+    setLiveCommentCount(post.commentsCount);
+  }, [post.id, post.commentsCount]);
+
+  const handleOpenCommentsInline = useCallback(() => {
+    setCommentsOpen(true);
+  }, []);
+
+  const handleCommentCountFromThread = useCallback((next: number) => {
+    setLiveCommentCount(next);
+  }, []);
 
   return (
     <article
@@ -43,9 +63,12 @@ export function PostCard({ post }: PostCardProps) {
         <PostActions
           postId={post.id}
           initialLikeCount={post.likesCount}
-          commentsCount={post.commentsCount}
+          commentsCount={liveCommentCount}
           initialViewerHasLiked={post.viewerHasLiked}
           initialViewerHasSaved={post.viewerHasSaved}
+          commentsInteraction={persist ? "inlineSheet" : "detailLink"}
+          onOpenCommentsInline={persist ? handleOpenCommentsInline : undefined}
+          commentsSheetOpen={persist ? commentsOpen : undefined}
         />
 
         <div className="space-y-3">
@@ -80,6 +103,16 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         ) : null}
       </section>
+
+      {persist ? (
+        <FeedCommentsSheet
+          open={commentsOpen}
+          onOpenChange={setCommentsOpen}
+          postId={post.id}
+          postTitle={post.title}
+          onCountChange={handleCommentCountFromThread}
+        />
+      ) : null}
     </article>
   );
 }

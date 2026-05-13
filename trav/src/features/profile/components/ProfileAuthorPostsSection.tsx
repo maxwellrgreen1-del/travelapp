@@ -7,10 +7,12 @@ import { buttonClassName } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { createClient } from "@/lib/supabase/client";
 
-import type { ProfileAuthorGridPost } from "@/features/profile/loadProfileAuthorPosts";
+import type { ProfileAuthorGridPost, ProfileAuthorMapPin } from "@/features/profile/loadProfileAuthorPosts";
 import { loadProfileAuthorPosts } from "@/features/profile/loadProfileAuthorPosts";
 
 import { ProfilePostGrid } from "@/features/profile/components/ProfilePostGrid";
+import { ProfilePostsWithoutMapFallback } from "@/features/profile/components/ProfilePostsWithoutMapFallback";
+import { ProfileTravelMap } from "@/features/profile/components/ProfileTravelMap";
 
 /** Lets the stats stripe stay honest while the masonry fetch races in. */
 export type ProfileStoriesHydrationEvent =
@@ -47,13 +49,13 @@ function ProfileTripGridIntro() {
         Field notes on the mantle
       </h2>
       <p className="text-sm leading-relaxed text-neutral-600">
-        Tap any waypoint for your Supabase recap — newest logs surface first.
+        Newest recaps first — your travel map above highlights posts we could place on the globe.
       </p>
     </div>
   );
 }
 
-/** Supabase-backed mantle for the traveller profile screen (map + dossier stay mocked for now). */
+/** Supabase-backed profile map + grid for an author’s published recaps. */
 export function ProfileAuthorPostsSection({
   authorId,
   viewerId = null,
@@ -65,6 +67,9 @@ export function ProfileAuthorPostsSection({
 
   const [supabase] = useState(() => createClient());
   const [posts, setPosts] = useState<ProfileAuthorGridPost[]>([]);
+  const [mapPins, setMapPins] = useState<ProfileAuthorMapPin[]>([]);
+  const [postsWithoutMapCoordinates, setPostsWithoutMapCoordinates] = useState<ProfileAuthorGridPost[]>([]);
+  const [mapColumnsAvailable, setMapColumnsAvailable] = useState(true);
   const [retryTick, setRetryTick] = useState(0);
   const [gridReloadBump, setGridReloadBump] = useState(0);
 
@@ -92,12 +97,18 @@ export function ProfileAuthorPostsSection({
         setStatus("error");
         setErrorMessage(pack.message);
         setPosts([]);
+        setMapPins([]);
+        setPostsWithoutMapCoordinates([]);
+        setMapColumnsAvailable(true);
         bridgeRef.current?.({ type: "error" });
         return;
       }
 
       setStatus("success");
       setPosts(pack.posts);
+      setMapPins(pack.mapPins);
+      setPostsWithoutMapCoordinates(pack.postsWithoutMapCoordinates);
+      setMapColumnsAvailable(pack.mapColumnsAvailable);
       bridgeRef.current?.({ type: "success", totalPublished: pack.totalPublished });
     }
 
@@ -110,10 +121,16 @@ export function ProfileAuthorPostsSection({
 
   if (status === "loading") {
     return (
-      <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
-        <ProfileTripGridIntro />
-        <ProfilePostGridSkeleton />
-      </section>
+      <div className="space-y-8">
+        <div className="space-y-3 px-1">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.32em] text-primary/85">Travel map</h2>
+          <div className="h-[min(52vh,420px)] min-h-[260px] animate-pulse rounded-[28px] bg-neutral-200/90 shadow-inner shadow-neutral-900/20 sm:min-h-[280px]" aria-hidden />
+        </div>
+        <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
+          <ProfileTripGridIntro />
+          <ProfilePostGridSkeleton />
+        </section>
+      </div>
     );
   }
 
@@ -143,27 +160,55 @@ export function ProfileAuthorPostsSection({
 
   if (posts.length === 0) {
     return (
-      <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
-        <ProfileTripGridIntro />
-        <EmptyState
-          title="No field notes published yet"
-          description="Spin up your first trip recap from Create — tiles land here newest-first once Supabase echoes the save."
-          action={
-            <Link href="/create" prefetch={false} className={buttonClassName({ variant: "primary", size: "md", className: "px-10" })}>
-              Compose maiden trip log
-            </Link>
-          }
-          className="rounded-[26px] border border-primary/35 bg-[#fcfbf9]/93"
-        />
-      </section>
+      <div className="space-y-8">
+        <ProfileTravelMap pins={[]} hasPublishedPosts={false} />
+
+        {!mapColumnsAvailable ? (
+          <p className="rounded-[22px] border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm leading-relaxed text-amber-950">
+            Map pins need the latest tript migration on your Supabase project. Everything else here still works — publish
+            trips as usual.
+          </p>
+        ) : null}
+
+        <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
+          <ProfileTripGridIntro />
+          <EmptyState
+            title="No trips to show yet"
+            description="Publish your first recap from Create — a travel map and photo grid will show up here once your stories land in Supabase."
+            action={
+              <Link href="/create" prefetch={false} className={buttonClassName({ variant: "primary", size: "md", className: "px-10" })}>
+                Compose your first trip log
+              </Link>
+            }
+            className="rounded-[26px] border border-primary/35 bg-[#fcfbf9]/93"
+          />
+        </section>
+      </div>
     );
   }
 
   return (
-    <ProfilePostGrid
-      posts={posts}
-      viewerId={viewerId}
-      onPostDeleted={() => setGridReloadBump((n) => n + 1)}
-    />
+    <div className="space-y-8">
+      {!mapColumnsAvailable ? (
+        <p className="rounded-[22px] border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm leading-relaxed text-amber-950">
+          Map pins need the latest tript migration on your Supabase project (`posts.map_latitude` / `map_longitude`). Your
+          posts and grid below still load normally.
+        </p>
+      ) : null}
+
+      <ProfileTravelMap pins={mapPins} hasPublishedPosts />
+
+      <ProfilePostsWithoutMapFallback posts={postsWithoutMapCoordinates} mapHasPins={mapPins.length > 0} />
+
+      <section aria-labelledby="profile-trip-grid-heading" className="space-y-5">
+        <ProfileTripGridIntro />
+        <ProfilePostGrid
+          posts={posts}
+          viewerId={viewerId}
+          onPostDeleted={() => setGridReloadBump((n) => n + 1)}
+          showHeading={false}
+        />
+      </section>
+    </div>
   );
 }

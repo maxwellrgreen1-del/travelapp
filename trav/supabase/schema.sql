@@ -63,6 +63,8 @@ CREATE TABLE public.posts (
   visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
   -- Denormalized line shown on cards; detailed stops live in post_locations.
   location_display TEXT,
+  map_latitude DOUBLE PRECISION,
+  map_longitude DOUBLE PRECISION,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );

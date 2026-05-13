@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { PlacesVisitedInputPlaceholder } from "@/features/create/components";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
 import type { PostForEditPayload } from "@/features/posts/loadPostForEditPayload";
+import { syncPostMapCoordinates } from "@/features/posts/syncPostMapCoordinates";
 import { updateTripPost } from "@/features/posts/updateTripPost";
 import { cx } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -77,13 +78,26 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
       placeNames,
     });
 
-    setSaving(false);
-
     if (!result.ok) {
+      setSaving(false);
       setSaveError(result.message);
       return;
     }
 
+    try {
+      await syncPostMapCoordinates(supabase, {
+        postId,
+        authorId: user.id,
+        locationDisplay: destination.trim(),
+        placeNames,
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[EditPostForm] syncPostMapCoordinates threw (unexpected):", error);
+      }
+    }
+
+    setSaving(false);
     router.refresh();
     router.push(`/post/${postId}`);
   }

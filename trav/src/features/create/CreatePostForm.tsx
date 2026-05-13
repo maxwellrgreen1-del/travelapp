@@ -19,6 +19,7 @@ import {
 } from "@/features/create/components";
 import { stashPostMediaUploadWarning } from "@/features/create/postPublishMediaWarningSession";
 import { publishTripPost } from "@/features/create/publishTripPost";
+import { syncPostMapCoordinates } from "@/features/posts/syncPostMapCoordinates";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
 import { attachPostGalleryImagesFromFiles } from "@/features/media";
 import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
@@ -126,6 +127,19 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       setPublishing(false);
       setPublishError(result.message);
       return;
+    }
+
+    try {
+      await syncPostMapCoordinates(supabase, {
+        postId: result.postId,
+        authorId: user.id,
+        locationDisplay: destination.trim(),
+        placeNames,
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[CreatePostForm] syncPostMapCoordinates threw (unexpected):", error);
+      }
     }
 
     if (heroFiles.length > 0) {

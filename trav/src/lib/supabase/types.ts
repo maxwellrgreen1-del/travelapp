@@ -55,6 +55,8 @@ export type Database = {
           journal: string | null;
           visibility: string;
           location_display: string | null;
+          map_latitude: number | null;
+          map_longitude: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -66,6 +68,8 @@ export type Database = {
           journal?: string | null;
           visibility?: string;
           location_display?: string | null;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -77,6 +81,8 @@ export type Database = {
           journal?: string | null;
           visibility?: string;
           location_display?: string | null;
+          map_latitude?: number | null;
+          map_longitude?: number | null;
           created_at?: string;
           updated_at?: string;
         };

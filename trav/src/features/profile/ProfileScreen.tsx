@@ -14,11 +14,9 @@ import { DestinationPreviewCard } from "@/features/profile/components/Destinatio
 import { ProfileFollowButton } from "@/features/profile/components/ProfileFollowButton";
 import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
 import { ProfileStats } from "@/features/profile/components/ProfileStats";
-import { TravelMapPreview } from "@/features/profile/components/TravelMapPreview";
 import { loadOrCreateProfileForUser } from "@/features/profile/loadOrCreateProfile";
 import type { MockTravelerSocialProfile } from "@/features/profile/mockTravelerProfile";
 import {
-  mockAtlasPins,
   mockSavedDestinationBoard,
   mockTravelerSocial,
 } from "@/features/profile/mockTravelerProfile";
@@ -266,8 +264,6 @@ export function ProfileScreen() {
               : "Stories + follow graph sync from Supabase — tap explorers in Search with “visit” to follow them here."
           }
         />
-
-        <TravelMapPreview pins={mockAtlasPins} />
 
         {user ? (
           <ProfileAuthorPostsSection

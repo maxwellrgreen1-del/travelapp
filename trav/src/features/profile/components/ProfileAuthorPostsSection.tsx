@@ -34,9 +34,8 @@ type ProfileAuthorPostsSectionProps = {
 function ProfilePostGridSkeleton() {
   return (
     <ul className="grid grid-cols-3 gap-[6px] sm:gap-3" aria-busy="true" aria-label="Loading your trip thumbnails">
-      {Array.from({ length: 9 }).map((_, index) => (
-        // eslint-disable-next-line react/no-array-index-key -- static decorative skeleton slots
-        <li key={`grid-skel-${index}`} className="aspect-square animate-pulse rounded-2xl bg-neutral-200/90 shadow-inner shadow-neutral-900/25" />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((slot) => (
+        <li key={`grid-skel-${slot}`} className="aspect-square animate-pulse rounded-2xl bg-neutral-200/90 shadow-inner shadow-neutral-900/25" />
       ))}
     </ul>
   );
@@ -63,7 +62,10 @@ export function ProfileAuthorPostsSection({
   onStoriesHydration,
 }: ProfileAuthorPostsSectionProps) {
   const bridgeRef = useRef(onStoriesHydration);
-  bridgeRef.current = onStoriesHydration;
+
+  useEffect(() => {
+    bridgeRef.current = onStoriesHydration;
+  }, [onStoriesHydration]);
 
   const [supabase] = useState(() => createClient());
   const [posts, setPosts] = useState<ProfileAuthorGridPost[]>([]);
@@ -117,7 +119,7 @@ export function ProfileAuthorPostsSection({
     return () => {
       cancelled = true;
     };
-  }, [authorId, reloadKey, retryTick, gridReloadBump, supabase]);
+  }, [authorId, reloadKey, retryTick, gridReloadBump, supabase, onStoriesHydration]);
 
   if (status === "loading") {
     return (

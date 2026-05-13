@@ -136,6 +136,7 @@ export function ProfileTravelMap({ pins: pinsProp, hasPublishedPosts, className 
 
       for (const pin of pins) {
         try {
+          /** Leaflet `LatLng` / `marker` expect **[latitude, longitude]** (Y then X), same as GeoJSON Point order. */
           const marker = L.marker([pin.lat, pin.lng], { icon }).addTo(map);
           marker.bindPopup(buildPopupHtml(pin), { maxWidth: 300, minWidth: 220, className: "tript-map-popup-wrap" });
         } catch (error) {
@@ -147,6 +148,7 @@ export function ProfileTravelMap({ pins: pinsProp, hasPublishedPosts, className 
 
       try {
         if (pins.length === 1) {
+          /** Center map on the single pin — tuple is [latitude, longitude]. */
           map.setView([pins[0].lat, pins[0].lng], DEFAULT_ZOOM_SINGLE);
         } else if (pins.length > 1) {
           const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng] as [number, number]));

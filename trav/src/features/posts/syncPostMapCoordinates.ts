@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildProfileMapGeocodeQuery } from "@/lib/geo/buildProfileMapGeocodeQuery";
 import type { Database } from "@/lib/supabase/types";
 
 type Client = SupabaseClient<Database>;
@@ -9,7 +10,7 @@ export type SyncPostMapCoordinatesInput = {
   authorId: string;
   /** `posts.location_display` — used when there are no waypoint names. */
   locationDisplay: string;
-  /** First non-empty name wins for geocoding; otherwise falls back to `locationDisplay`. */
+  /** Ordered waypoint labels from `post_locations` (first is combined with `location_display` when helpful). */
   placeNames: string[];
 };
 
@@ -20,16 +21,17 @@ function devWarn(...args: unknown[]): void {
 }
 
 /**
- * Best-effort: geocode first waypoint (or the location line) and store on `posts` for profile map pins.
- * Never throws. Geocode/network failures leave existing coordinates unchanged so edits cannot wipe a good pin by accident.
+ * Best-effort: geocode a composed place string and store on `posts` for profile map pins.
+ * Never throws. Geocode/network failures **leave existing coordinates unchanged** (no silent wipe on bad HTTP / empty body).
  * Coordinates are cleared only when there is no usable query string (author removed place context).
+ *
+ * Storage matches Nominatim: `lat` → `map_latitude`, `lon` (exposed as `lng` in JSON) → `map_longitude`.
  */
 export async function syncPostMapCoordinates(
   supabase: Client,
   input: SyncPostMapCoordinatesInput,
 ): Promise<void> {
-  const firstPlace = input.placeNames.map((name) => name.trim()).find(Boolean);
-  const query = firstPlace || input.locationDisplay.trim();
+  const query = buildProfileMapGeocodeQuery(input.locationDisplay, input.placeNames);
 
   if (!query) {
     const { error } = await supabase

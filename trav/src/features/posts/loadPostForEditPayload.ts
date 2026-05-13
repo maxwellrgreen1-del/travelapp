@@ -10,6 +10,9 @@ export type PostForEditPayload = {
   description: string;
   journal: string;
   placeNames: string[];
+  /** Existing map pin from `posts` when present — seeds autocomplete coordinate lock. */
+  mapLatitude: number | null;
+  mapLongitude: number | null;
 };
 
 export type LoadPostForEditResult =
@@ -47,6 +50,13 @@ export async function loadPostForEditPayload(
 
   const placeNames = (stops ?? []).map((row) => row.name.trim()).filter(Boolean);
 
+  const latRaw = post.map_latitude;
+  const lngRaw = post.map_longitude;
+  const mapLatitude =
+    latRaw != null && Number.isFinite(Number(latRaw)) && Math.abs(Number(latRaw)) <= 90 ? Number(latRaw) : null;
+  const mapLongitude =
+    lngRaw != null && Number.isFinite(Number(lngRaw)) && Math.abs(Number(lngRaw)) <= 180 ? Number(lngRaw) : null;
+
   return {
     kind: "ok",
     data: {
@@ -55,6 +65,8 @@ export async function loadPostForEditPayload(
       description: post.description?.trim() || "",
       journal: post.journal?.trim() || "",
       placeNames: placeNames.length ? placeNames : [""],
+      mapLatitude,
+      mapLongitude,
     },
   };
 }

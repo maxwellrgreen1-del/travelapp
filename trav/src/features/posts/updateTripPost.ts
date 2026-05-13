@@ -17,6 +17,11 @@ export type UpdateTripPostInput = {
   description: string;
   journal: string;
   placeNames: string[];
+  /**
+   * When set, updates `posts.map_latitude` / `map_longitude` to match a picked suggestion.
+   * Omit to leave map columns unchanged (free-typed edits rely on `syncPostMapCoordinates` after save).
+   */
+  pickedMapCoordinates?: { lat: number; lng: number };
 };
 
 function friendlyError(error: PostgrestishError | null): string {
@@ -40,16 +45,33 @@ export async function updateTripPost(
   const journal = input.journal.trim() ? input.journal.trim() : null;
   const placeNames = input.placeNames.filter((name) => name.trim().length > 0).map((name) => name.trim());
 
-  const { error: updateError } = await supabase
-    .from("posts")
-    .update({
-      title: input.title.trim(),
-      description: input.description.trim(),
-      journal,
-      location_display: input.locationDisplay.trim(),
-    })
-    .eq("id", input.postId)
-    .eq("author_id", input.authorId);
+  const patch: {
+    title: string;
+    description: string;
+    journal: string | null;
+    location_display: string;
+    map_latitude?: number;
+    map_longitude?: number;
+  } = {
+    title: input.title.trim(),
+    description: input.description.trim(),
+    journal,
+    location_display: input.locationDisplay.trim(),
+  };
+
+  const pin = input.pickedMapCoordinates;
+  if (
+    pin &&
+    Number.isFinite(pin.lat) &&
+    Number.isFinite(pin.lng) &&
+    Math.abs(pin.lat) <= 90 &&
+    Math.abs(pin.lng) <= 180
+  ) {
+    patch.map_latitude = pin.lat;
+    patch.map_longitude = pin.lng;
+  }
+
+  const { error: updateError } = await supabase.from("posts").update(patch).eq("id", input.postId).eq("author_id", input.authorId);
 
   if (updateError) {
     return { ok: false, message: friendlyError(updateError) };

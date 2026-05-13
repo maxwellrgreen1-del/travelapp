@@ -10,7 +10,11 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Textarea } from "@/components/ui/Textarea";
-import { PlacesVisitedInputPlaceholder } from "@/features/create/components";
+import {
+  LocationDestinationSuggest,
+  PlacesVisitedInputPlaceholder,
+  type DestinationCoords,
+} from "@/features/create/components";
 import { validateCreatePostCoreFields, type CreatePostCoreErrors } from "@/features/create/validateCreatePostCore";
 import type { PostForEditPayload } from "@/features/posts/loadPostForEditPayload";
 import { syncPostMapCoordinates } from "@/features/posts/syncPostMapCoordinates";
@@ -28,6 +32,21 @@ function summarizePlaces(rows: string[]) {
   return rows.map((row) => row.trim()).filter(Boolean);
 }
 
+function initialCoordsFromPayload(data: PostForEditPayload): DestinationCoords | null {
+  const { mapLatitude, mapLongitude } = data;
+  if (
+    mapLatitude != null &&
+    mapLongitude != null &&
+    Number.isFinite(mapLatitude) &&
+    Number.isFinite(mapLongitude) &&
+    Math.abs(mapLatitude) <= 90 &&
+    Math.abs(mapLongitude) <= 180
+  ) {
+    return { lat: mapLatitude, lng: mapLongitude };
+  }
+  return null;
+}
+
 /** Owner-only editor — mirrors the create composer for shared fields; gallery stays read-only in Supabase for now. */
 export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
   const router = useRouter();
@@ -35,6 +54,9 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
 
   const [tripTitle, setTripTitle] = useState(initialData.title);
   const [destination, setDestination] = useState(initialData.locationDisplay);
+  const [destinationCoords, setDestinationCoords] = useState<DestinationCoords | null>(() =>
+    initialCoordsFromPayload(initialData),
+  );
   const [shortDescription, setShortDescription] = useState(initialData.description);
   const [journalBody, setJournalBody] = useState(initialData.journal);
   const [placesVisited, setPlacesVisited] = useState<string[]>(
@@ -68,6 +90,15 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
 
     const placeNames = summarizePlaces(placesVisited);
 
+    const picked =
+      destinationCoords &&
+      Number.isFinite(destinationCoords.lat) &&
+      Number.isFinite(destinationCoords.lng) &&
+      Math.abs(destinationCoords.lat) <= 90 &&
+      Math.abs(destinationCoords.lng) <= 180
+        ? { lat: destinationCoords.lat, lng: destinationCoords.lng }
+        : undefined;
+
     const result = await updateTripPost(supabase, {
       postId,
       authorId: user.id,
@@ -76,6 +107,7 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
       description: shortDescription.trim(),
       journal: journalBody,
       placeNames,
+      ...(picked ? { pickedMapCoordinates: picked } : {}),
     });
 
     if (!result.ok) {
@@ -84,16 +116,18 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
       return;
     }
 
-    try {
-      await syncPostMapCoordinates(supabase, {
-        postId,
-        authorId: user.id,
-        locationDisplay: destination.trim(),
-        placeNames,
-      });
-    } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[EditPostForm] syncPostMapCoordinates threw (unexpected):", error);
+    if (!picked) {
+      try {
+        await syncPostMapCoordinates(supabase, {
+          postId,
+          authorId: user.id,
+          locationDisplay: destination.trim(),
+          placeNames,
+        });
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[EditPostForm] syncPostMapCoordinates threw (unexpected):", error);
+        }
       }
     }
 
@@ -143,18 +177,22 @@ export function EditPostForm({ user, postId, initialData }: EditPostFormProps) {
             }}
           />
 
-          <Input
+          <LocationDestinationSuggest
             required
-            autoComplete="off"
             label="Destination / location focus"
             placeholder="Southern Patagonian Ice Field, Chile..."
-            hint="Saved to `posts.location_display`."
+            hint="Saved to `posts.location_display`. Pick a suggestion for an exact map pin, or type freely and we geocode after save."
             value={destination}
-            error={errors.destination}
-            onChange={(event) => {
-              setDestination(event.target.value);
-              if (errors.destination) setErrors((prev) => ({ ...prev, destination: undefined }));
+            onValueChange={(next) => {
+              setDestination(next);
+              if (errors.destination) {
+                setErrors((prev) => ({ ...prev, destination: undefined }));
+              }
             }}
+            selectedCoords={destinationCoords}
+            onSelectedCoordsChange={setDestinationCoords}
+            error={errors.destination}
+            disabled={interactionLocked}
           />
 
           <Textarea

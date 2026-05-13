@@ -21,6 +21,12 @@ export type PublishTripPostInput = {
   visibility?: "public" | "private";
   /** Trimmed waypoint names inserted into `post_locations` in order. */
   placeNames: string[];
+  /**
+   * When the traveller chose an autocomplete hit, write exact Nominatim coordinates to `posts`.
+   * Omit for free-typed destinations — `syncPostMapCoordinates` can fill pins after publish.
+   */
+  mapLatitude?: number;
+  mapLongitude?: number;
 };
 
 function friendlyPublishError(error: PostgrestishError | null): string {
@@ -53,18 +59,38 @@ export async function publishTripPost(
   const journal = input.journal.trim() ? input.journal.trim() : null;
   const placeNames = input.placeNames.filter((name) => name.trim().length > 0).map((name) => name.trim());
 
-  const { data: inserted, error: postError } = await supabase
-    .from("posts")
-    .insert({
-      author_id: input.authorId,
-      title: input.title.trim(),
-      description: input.description.trim(),
-      journal,
-      visibility,
-      location_display: input.locationDisplay.trim(),
-    })
-    .select("id")
-    .single();
+  const hasPinned =
+    input.mapLatitude !== undefined &&
+    input.mapLongitude !== undefined &&
+    Number.isFinite(input.mapLatitude) &&
+    Number.isFinite(input.mapLongitude) &&
+    Math.abs(input.mapLatitude) <= 90 &&
+    Math.abs(input.mapLongitude) <= 180;
+
+  const insertRow: {
+    author_id: string;
+    title: string;
+    description: string;
+    journal: string | null;
+    visibility: string;
+    location_display: string;
+    map_latitude?: number;
+    map_longitude?: number;
+  } = {
+    author_id: input.authorId,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    journal,
+    visibility,
+    location_display: input.locationDisplay.trim(),
+  };
+
+  if (hasPinned) {
+    insertRow.map_latitude = input.mapLatitude;
+    insertRow.map_longitude = input.mapLongitude;
+  }
+
+  const { data: inserted, error: postError } = await supabase.from("posts").insert(insertRow).select("id").single();
 
   if (postError || !inserted) {
     return { ok: false, message: friendlyPublishError(postError) };

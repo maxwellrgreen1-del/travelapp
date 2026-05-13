@@ -12,7 +12,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   LinkListInputPlaceholder,
+  LocationDestinationSuggest,
   type CreatorLinkDraft,
+  type DestinationCoords,
   PlacesVisitedInputPlaceholder,
   PostGalleryImagePicker,
   TagInputPlaceholder,
@@ -42,6 +44,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
 
   const [tripTitle, setTripTitle] = useState("");
   const [destination, setDestination] = useState("");
+  const [destinationCoords, setDestinationCoords] = useState<DestinationCoords | null>(null);
   const [shortDescription, setShortDescription] = useState("");
   const [journalBody, setJournalBody] = useState("");
   const [restaurants, setRestaurants] = useState("");
@@ -70,6 +73,7 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
   function resetComposer() {
     setTripTitle("");
     setDestination("");
+    setDestinationCoords(null);
     setShortDescription("");
     setJournalBody("");
     setRestaurants("");
@@ -113,15 +117,24 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
 
     const placeNames = summarizePlaces(placesVisited);
 
-    const result = await publishTripPost(supabase, {
+    const publishInput = {
       authorId: user.id,
       title: tripTitle.trim(),
       locationDisplay: destination.trim(),
       description: shortDescription.trim(),
       journal: journalBody,
-      visibility: "public",
+      visibility: "public" as const,
       placeNames,
-    });
+      ...(destinationCoords &&
+      Number.isFinite(destinationCoords.lat) &&
+      Number.isFinite(destinationCoords.lng) &&
+      Math.abs(destinationCoords.lat) <= 90 &&
+      Math.abs(destinationCoords.lng) <= 180
+        ? { mapLatitude: destinationCoords.lat, mapLongitude: destinationCoords.lng }
+        : {}),
+    };
+
+    const result = await publishTripPost(supabase, publishInput);
 
     if (!result.ok) {
       setPublishing(false);
@@ -129,16 +142,18 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
       return;
     }
 
-    try {
-      await syncPostMapCoordinates(supabase, {
-        postId: result.postId,
-        authorId: user.id,
-        locationDisplay: destination.trim(),
-        placeNames,
-      });
-    } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[CreatePostForm] syncPostMapCoordinates threw (unexpected):", error);
+    if (!destinationCoords) {
+      try {
+        await syncPostMapCoordinates(supabase, {
+          postId: result.postId,
+          authorId: user.id,
+          locationDisplay: destination.trim(),
+          placeNames,
+        });
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[CreatePostForm] syncPostMapCoordinates threw (unexpected):", error);
+        }
       }
     }
 
@@ -208,18 +223,22 @@ export function CreatePostForm({ user }: CreatePostFormProps) {
             }}
           />
 
-          <Input
+          <LocationDestinationSuggest
             required
-            autoComplete="off"
             label="Destination / location focus"
             placeholder="Southern Patagonian Ice Field, Chile..."
-            hint="Countries, valleys, waterways — specificity helps explorers picture the arc. Saved to `posts.location_display`."
+            hint="Countries, valleys, waterways — specificity helps explorers picture the arc. Saved to `posts.location_display`. Pick a suggestion for an exact map pin, or type freely and we geocode after save."
             value={destination}
-            error={errors.destination}
-            onChange={(event) => {
-              setDestination(event.target.value);
-              if (errors.destination) setErrors((prev) => ({ ...prev, destination: undefined }));
+            onValueChange={(next) => {
+              setDestination(next);
+              if (errors.destination) {
+                setErrors((prev) => ({ ...prev, destination: undefined }));
+              }
             }}
+            selectedCoords={destinationCoords}
+            onSelectedCoordsChange={setDestinationCoords}
+            error={errors.destination}
+            disabled={interactionLocked}
           />
 
           <Textarea
